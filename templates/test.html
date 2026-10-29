@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Collapsible Multi-Select Dropdowns</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
+</head>
+<body>
+
+<form id="submissionForm">
+    <!-- DROPDOWN 1: categories -->
+    <div class="form-group">
+        <label>Select categories:</label>
+        <div class="multiselect-container">
+            <div class="select-box combo-header">
+                <input type="text" class="display-textbox" placeholder="Choose categories..." readonly>
+                <span class="arrow"></span>
+            </div>
+            <input type="hidden" class="hidden-ids-input" name="selected_category_ids">
+            
+            <div class="dropdown-panel">
+                <label class="option-item"><input type="checkbox" data-id="101" value="Apple"> Apple</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- DROPDOWN 2: commodities -->
+    <div class="form-group">
+        <label>Select commodities:</label>
+        <div class="multiselect-container">
+            <div class="select-box combo-header">
+                <input type="text" class="display-textbox" placeholder="Choose veggies..." readonly>
+                <span class="arrow"></span>
+            </div>
+            <input type="hidden" class="hidden-ids-input" name="selected_commodity_ids">
+            
+            <div class="dropdown-panel">
+                <label class="option-item"><input type="checkbox" data-id="201" value="Carrot"> Carrot</label>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // Target all dropdown component wrappers on the page
+    const dropdownContainers = document.querySelectorAll('.multiselect-container');
+
+    dropdownContainers.forEach(container => {
+        const header = container.querySelector('.combo-header');
+        const textbox = container.querySelector('.display-textbox');
+        const hiddenInput = container.querySelector('.hidden-ids-input');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+
+        // Toggle dropdown visibility for this specific component
+        header.addEventListener('click', (e) => {
+            // Optional: Close any other open dropdowns first
+            dropdownContainers.forEach(otherContainer => {
+                if (otherContainer !== container) {
+                    otherContainer.classList.remove('open');
+                }
+            });
+            
+            container.classList.toggle('open');
+            e.stopPropagation();
+        });
+
+        // Listen for checkbox changes scoped strictly inside this container
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const selectedLabels = [];
+                const selectedIds = [];
+                
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedLabels.push(cb.value);
+                        selectedIds.push(cb.dataset.id);
+                    }
+                });
+
+                textbox.value = selectedLabels.join(', ');
+                hiddenInput.value = selectedIds.join(', ');
+            });
+        });
+    });
+
+    // Close any open dropdown panel if the user clicks anywhere else on the page
+    document.addEventListener('click', (e) => {
+        dropdownContainers.forEach(container => {
+            if (!container.contains(e.target)) {
+                container.classList.remove('open');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

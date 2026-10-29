@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Price Watch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
+</head>
+<body>
+    
+    {% include 'navbar.html' %}
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <header class="top">
+                <div class="crumb">Philippines Food Price Watch · Overview</div>
+                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Weekly</div>
+            </header>
+        </div>
+        <div class="container-fluid">
+            <form name="filters" method="get" action="{{ url_for('index') }}">
+            <section class="filters" id="filters">
+                <div class="field">
+                    <label for="category">Category</label>
+                    <select id="category_id" name="category_id"  multiple size="5"> <!-- onchange="this.form.elements['commodity_id'].value=''; this.form.submit()" -->
+                        <option value="">All categories</option>
+                        {% for category in categories_rows %}
+                        <option value="{{ category.category_id }}" {% if category.category_id == selected_category_id %}selected{% endif %}>{{ category.category_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="commodity">Commodity</label>
+                    <select id="commodity_id" name="commodity_id">
+                        <option value="">All commodities</option>
+                        {% for commodity in commodities_rows %}
+                        {% if commodity.commodity_id == selected_commodity_id %}selected{% endif %}>
+                        <option value="{ rows.commodity_id}">{{ commodity.commodity_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="region">Region</label>
+                    <select id="region">
+                        <option>All regions</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="market">Market</label>
+                    <select id="market">
+                        <option>All markets</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="from">From</label>
+                    <input id="from" type="date">
+                </div>
+                <div class="field">
+                    <label for="to">To</label>
+                    <input id="to" type="date">
+                </div>
+            </section>
+            <button type="submit">Filter</button>
+            </form>
+            <section class="kpis">
+                <div class="kpi">
+                    <div class="kpi-label">Change vs prior month</div>
+                    <div class="kpi-value" id="change">—</div>
+                    <div class="kpi-sub">Based on monthly averages</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Traced Commodities</div>
+                    <div class="kpi-value" id="commodities_count">{{commodities_count}}</div>
+                    <div class="kpi-sub" id="category_count">Accross {{category_count}} food categories</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Markets covered</div>
+                    <div class="kpi-value" id="market_count">{{market_count}}</div>
+                    <div class="kpi-sub">Accross {{ "{:,}".format(region_count|int)}} regions</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Price Observations</div>
+                    <div class="kpi-value" id="price_obs_count">
+                        <span class="kpi-value1">{{ "{:,}".format(price_obs_count|int) }}</span>
+                        <span class="kpi-value2">{{ "{:,}".format(price_obs_count_new|int) }}</span>
+                    </div>
+                    <div class="kpi-sub">
+                        <span class="kpi-sub1">All rows</span>
+                        <span class="kpi-sub2">New</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

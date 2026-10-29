@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Price Watch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
+</head>
+<body>
+    
+    {% include 'navbar.html' %}
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <header class="top">
+                <div class="crumb">Overview</div>
+                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Weekly</div>
+            </header>
+        </div>
+        <div class="container-fluid">
+            <form name="filters" method="get" action="{{ url_for('index') }}">
+                <section class="filters" id="filters">
+                    
+                    <!-- DROPDOWN 1: categories -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Category</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ category_names|join(', ') }}" placeholder="Choose categories..." readonly >
+                                <span class="arrow"></span>
+                            </div>
+                                <input type="hidden" class="hidden-ids-input" name="category_ids" value="{{ request.args.get('category_ids', '') }}">
+                            <div class="dropdown-panel">
+                                <label class="option-item">
+                                    <input type="checkbox" name="category_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All categories">All categories <!-- onchange="uncheckChildCheckbox(this)" -->
+                                </label>
+                                {% for category in categories_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
+                                    data-id="{{ category.category_id }}" 
+                                    value="{{ category.category_name }}" 
+                                    {% if category.category_id in category_ids %}checked{% endif %}>{{ category.category_name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN 2: commodities -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Commodity</label>
+                        <div class="multiselect-container"> 
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ commodity_names|join(', ') }}" placeholder="Choose commodities" readonly >
+                                <span class="arrow"></span>
+                            </div>
+                                <input type="hidden" class="hidden-ids-input" name="commodity_ids" value="{{ request.args.get('commodity_ids', '') }}">
+                            <div class="dropdown-panel">
+                                <div class="search-box combo-header">
+                                    <input type="search" class="dropdown-search" placeholder="Search..." aria-label="Search commodities">
+                                </div>
+                                <label class="option-item">
+                                    <input type="checkbox" name="commodity_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All commodities">All commodities <!-- onchange="uncheckChildCheckbox(this)" -->
+                                </label>
+                                {% for commodity in commodities_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
+                                    data-id="{{ commodity.commodity_id }}" 
+                                    value="{{ commodity.commodity_name }}" 
+                                    {% if commodity.commodity_id in commodity_ids %}checked{% endif %}>{{ commodity.commodity_name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN 3: regions -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Region</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ region_texts|join(', ') }}" placeholder="Choose regions..." readonly >
+                                <span class="arrow"></span>
+                            </div>
+                                <input type="hidden" class="hidden-ids-input" name="region_values" value="{{ request.args.get('region_values', '') }}">
+                            <div class="dropdown-panel-wider">
+                                <label class="option-item">
+                                    <input type="checkbox" name="region_texts" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All regions">All regions <!-- onchange="uncheckChildCheckbox(this)" -->
+                                </label>
+                                {% for region in regions_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
+                                    data-id="{{ region.region_value }}" 
+                                    value="{{ region.region_text }}" 
+                                    {% if region.region_value in region_values %}checked{% endif %}>{{ region.region_text }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN 2: province -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Province</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ commodity_names|join(', ') }}" placeholder="Choose commodities..." readonly >
+                                <span class="arrow"></span>
+                            </div>
+                                <input type="hidden" class="hidden-ids-input" name="commodity_ids" value="{{ request.args.get('commodity_ids', '') }}">
+                            <div class="dropdown-panel">
+                                <label class="option-item">
+                                    <input type="checkbox" name="commodity_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All commodities">All commodities <!-- onchange="uncheckChildCheckbox(this)" -->
+                                </label>
+                                {% for commodity in commodities_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
+                                    data-id="{{ commodity.commodity_id }}" 
+                                    value="{{ commodity.commodity_name }}" 
+                                    {% if commodity.commodity_id in commodity_ids %}checked{% endif %}>{{ commodity.commodity_name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN 2: market -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Market</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ commodity_names|join(', ') }}" placeholder="Choose commodities..." readonly >
+                                <span class="arrow"></span>
+                            </div>
+                                <input type="hidden" class="hidden-ids-input" name="commodity_ids" value="{{ request.args.get('commodity_ids', '') }}">
+                            <div class="dropdown-panel">
+                                <label class="option-item">
+                                    <input type="checkbox" name="commodity_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All commodities">All commodities <!-- onchange="uncheckChildCheckbox(this)" -->
+                                </label>
+                                {% for commodity in commodities_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
+                                    data-id="{{ commodity.commodity_id }}" 
+                                    value="{{ commodity.commodity_name }}" 
+                                    {% if commodity.commodity_id in commodity_ids %}checked{% endif %}>{{ commodity.commodity_name }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="from">From</label>
+                        <input id="from" type="date">
+                    </div>
+                    <div class="field">
+                        <label for="to">To</label>
+                        <input id="to" type="date">
+                    </div>
+                </section>
+            <button type="submit">Filter</button>
+            </form>
+            <section class="kpis">
+                <div class="kpi">
+                    <div class="kpi-label">Change vs prior month</div>
+                    <div class="kpi-value" id="change">—</div>
+                    <div class="kpi-sub">Based on monthly averages</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Traced Commodities</div>
+                    <div class="kpi-value" id="commodities_count">{{commodities_count}}</div>
+                    <div class="kpi-sub" id="category_count">Accross {{category_count}} food categories</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Markets covered</div>
+                    <div class="kpi-value" id="market_count">{{market_count}}</div>
+                    <div class="kpi-sub">Accross {{ "{:,}".format(region_count|int)}} regions</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Price Observations</div>
+                    <div class="kpi-value" id="price_obs_count">
+                        <span class="kpi-value1">{{ "{:,}".format(price_obs_count|int) }}</span>
+                        <span class="kpi-value2">{{ "{:,}".format(price_obs_count_new|int) }}</span>
+                    </div>
+                    <div class="kpi-sub">
+                        <span class="kpi-sub1">All rows</span>
+                        <span class="kpi-sub2">New</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+</body>
+</html>
+

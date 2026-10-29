@@ -1,0 +1,48 @@
+<!-- Side Bar -->
+     <div class="sidebar">
+        <nav class="nav flex-column">
+            <a class="nav-header" href="{{ url_for('index') }}">
+                <span class="icon">
+                    <i class="bi bi-cash"></i>
+                </span>
+                <span class="nav-header-text">Philippines <br> Food Price Watch</span>
+            </a>
+            <hr>
+            <a class="nav-link" href="{{ url_for('index') }}">
+                <span class="icon">
+                    <i class="bi bi-grid"></i>
+                </span>
+                <span class="description">Overview</span>
+            </a>
+            <a class="nav-link" href="{{ url_for('price_observations') }}">
+                <span class="icon">
+                    <i class="bi bi-bar-chart"></i>
+                </span>
+                <span class="description">Price Observations</span>
+            </a>
+            <a class="nav-link" href="{{ url_for('commodities') }}">
+                <span class="icon">
+                    <i class="bi bi-cart"></i>
+                </span>
+                <span class="description">Commodities</span>
+            </a>
+            <a class="nav-link" href="{{ url_for('markets') }}">
+                <span class="icon">
+                    <i class="bi bi-shop"></i>
+                </span>
+                <span class="description">Markets</span>
+            </a>
+            <div class="nav-footer">
+                <a class="about-link" href="{{ url_for('test') }}">
+                    <span class="icon">
+                        <i class="bi bi-info-circle"></i>
+                    </span>
+                    <span class="description">About this Project</span>
+                </a>
+                <div class="pipeline-card">
+                    <small><span class="pipeline-dot"></span>Pipeline status</small>
+                    <strong>Latest sync · 12:00 AM PHT</strong>
+                </div>
+            </div>
+        </nav>
+     </div>
