@@ -17,7 +17,7 @@
         <div class="container-fluid">
             <header class="top">
                 <div class="crumb">Overview</div>
-                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Weekly</div>
+                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Monthly</div>
             </header>
         </div>
         <div class="container-fluid">
@@ -102,50 +102,56 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 2: province -->
+                    <!-- DROPDOWN 4: province -->
                     <div class="form-group">
                         <label class="dropdown-label">Province</label>
                         <div class="multiselect-container">
                             <div class="select-box combo-header">
-                                <input type="text" class="display-textbox" value="{{ commodity_names|join(', ') }}" placeholder="Choose commodities..." readonly >
+                                <input type="text" class="display-textbox" value="{{ province_names|join(', ') }}" placeholder="Choose province..." readonly >
                                 <span class="arrow"></span>
                             </div>
-                                <input type="hidden" class="hidden-ids-input" name="commodity_ids" value="{{ request.args.get('commodity_ids', '') }}">
+                                <input type="hidden" class="hidden-ids-input" name="province_names" value="{{ request.args.get('province_names', '') }}">
                             <div class="dropdown-panel">
+                                 <div class="search-box combo-header">
+                                    <input type="search" class="dropdown-search" placeholder="Search..." aria-label="Search commodities">
+                                </div>
                                 <label class="option-item">
-                                    <input type="checkbox" name="commodity_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All commodities">All commodities <!-- onchange="uncheckChildCheckbox(this)" -->
+                                    <input type="checkbox" name="province_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All provinces">All provinces <!-- onchange="uncheckChildCheckbox(this)" -->
                                 </label>
-                                {% for commodity in commodities_rows %}
+                                {% for province in province_rows %}
                                 <label class="option-item">
                                     <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
-                                    data-id="{{ commodity.commodity_id }}" 
-                                    value="{{ commodity.commodity_name }}" 
-                                    {% if commodity.commodity_id in commodity_ids %}checked{% endif %}>{{ commodity.commodity_name }}
+                                    data-id="{{ province.province_name }}" 
+                                    value="{{ province.province_name }}" 
+                                    {% if province.province_name in province_names %}checked{% endif %}>{{ province.province_name }}
                                 </label>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 2: market -->
+                    <!-- DROPDOWN 5: markets -->
                     <div class="form-group">
                         <label class="dropdown-label">Market</label>
-                        <div class="multiselect-container">
+                        <div class="multiselect-container"> 
                             <div class="select-box combo-header">
-                                <input type="text" class="display-textbox" value="{{ commodity_names|join(', ') }}" placeholder="Choose commodities..." readonly >
+                                <input type="text" class="display-textbox" value="{{ market_names|join(', ') }}" placeholder="Choose markets" readonly >
                                 <span class="arrow"></span>
                             </div>
-                                <input type="hidden" class="hidden-ids-input" name="commodity_ids" value="{{ request.args.get('commodity_ids', '') }}">
+                                <input type="hidden" class="hidden-ids-input" name="market_ids" value="{{ request.args.get('market_ids', '') }}">
                             <div class="dropdown-panel">
+                                <div class="search-box combo-header">
+                                    <input type="search" class="dropdown-search" placeholder="Search..." aria-label="Search markets">
+                                </div>
                                 <label class="option-item">
-                                    <input type="checkbox" name="commodity_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All commodities">All commodities <!-- onchange="uncheckChildCheckbox(this)" -->
+                                    <input type="checkbox" name="market_names" class="master-checkbox" id="master-group1" data-target="group1" data-id="0" value="All markets">All markets <!-- onchange="uncheckChildCheckbox(this)" -->
                                 </label>
-                                {% for commodity in commodities_rows %}
+                                {% for market in markets_rows %}
                                 <label class="option-item">
                                     <input type="checkbox" class="group1 child-checkbox" data-master="master-group1" 
-                                    data-id="{{ commodity.commodity_id }}" 
-                                    value="{{ commodity.commodity_name }}" 
-                                    {% if commodity.commodity_id in commodity_ids %}checked{% endif %}>{{ commodity.commodity_name }}
+                                    data-id="{{ market.market_id }}" 
+                                    value="{{ market.market_name }}" 
+                                    {% if market.market_id in market_ids %}checked{% endif %}>{{ market.market_name }}
                                 </label>
                                 {% endfor %}
                             </div>
@@ -194,7 +200,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/overview.js') }}" defer></script>
 </body>
 </html>
 

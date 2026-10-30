@@ -5,12 +5,12 @@ from flask import Flask, Response, request, jsonify, render_template
 from flask_scss import Scss
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text, bindparam
-from scripts.connection import database_url, db
+from src.connection import database_url, db
+import src.helpers as helpers
 
 
 # Initialize the Flask application
 app = Flask(__name__)
-
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -30,143 +30,76 @@ def check_database():
 @app.get("/")
 def index():
 
-    ########## GET THE IDs AS RAW STRING ##########
+    #==================== GET THE IDs AS RAW STRING =====================
     raw_category_ids = request.args.get("category_ids", "")
     raw_commodity_ids = request.args.get("commodity_ids", "")
     raw_region_values = request.args.get("region_values", "")
+    raw_province_values = request.args.get("province_names")
+    raw_market_ids = request.args.get("market_ids")
 
 
-    ##### PASS THE IDs INTO AN ARRAY #####
-    try:
-        selected_category_ids = [
-            int(value.strip())
-            for value in raw_category_ids.split(",")
-            if value.strip()
-        ]
-
-        selected_commodity_ids = [
-            int(value.strip())
-            for value in raw_commodity_ids.split(",")
-            if value.strip()
-        ]
-
-        selected_region_values = [
-            str(value.strip())
-            for value in raw_region_values.split(",")
-            if value.strip()
-        ]
-    except ValueError:
-        selected_category_ids = []
-        selected_commodity_ids = []
-        selected_region_values = []
+    #==================== PASS THE IDs INTO AN ARRAY =====================
+    selected_category_ids = helpers.raw_string_to_array(raw_category_ids, "int")
+    selected_commodity_ids = helpers.raw_string_to_array(raw_commodity_ids, "int")
+    selected_region_values = helpers.raw_string_to_array(raw_region_values, "str")
+    selected_province_values = helpers.raw_string_to_array(raw_province_values, "str")
+    selected_market_ids = helpers.raw_string_to_array(raw_market_ids, "int")
     
 
-    ########## OPEN SUPABASE CONNECTION ##########
-    with db.engine.connect() as connection:
-        
-        ########## BUILD  THE SELECTED CATEGORIES ##########
-        category_names = []
-        if selected_category_ids:
-            category_result = connection.execute(
-                text("""
+    #==================== RE-BUILD THE SELECTED ITEMS IN MULTI-SELECT DROPDOWNS ====================
+    category_names = helpers.records_to_array_from_ids(selected_category_ids, text("""
                     SELECT category_name
                     FROM categories
                     WHERE category_id IN :category_ids
                     ORDER BY category_name
-                """).bindparams(bindparam("category_ids", expanding=True)),
-                {"category_ids": selected_category_ids},
-            )
-            category_names = [
-                row["category_name"] for row in category_result.mappings()
-            ]
+                """), "category_ids", "category_name")
 
+    commodity_names = helpers.records_to_array_from_ids(selected_commodity_ids, text("""
+                        SELECT commodity_name
+                        FROM commodities
+                        WHERE commodity_id IN :commodity_ids
+                        ORDER BY commodity_name
+                    """), "commodity_ids", "commodity_name")
 
-        ######## BUILD  THE SELECTED COMMODITIES ########
-        commodity_names = []
-        if selected_commodity_ids:
-            commodity_result = connection.execute(
-                text("""
-                    SELECT commodity_name
-                    FROM commodities
-                    WHERE commodity_id IN :commodity_ids
-                    ORDER BY commodity_name
-                """).bindparams(bindparam("commodity_ids", expanding=True)),
-                {"commodity_ids": selected_commodity_ids},
-            )
-            commodity_names = [
-                row["commodity_name"] for row in commodity_result.mappings()
-            ]
+    region_texts = helpers.records_to_array_from_ids(selected_region_values, text("""
+                        SELECT DISTINCT admin1 AS region_value,
+                        CASE
+                        WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
+                        WHEN admin1 = 'Cordillera Administrative region' THEN 'Cordillera Administrative region (CAR)'
+                        WHEN admin1 = 'National Capital region' THEN 'National Capital region (NCR)'
+                        WHEN admin1 = 'Region I' THEN 'Region I (ILOCOS REGION)'
+                        WHEN admin1 = 'Region II' THEN 'Region II (CAGAYAN VALLEY)'
+                        WHEN admin1 = 'Region III' THEN 'Region III (CENTRAL LUZON)'
+                        WHEN admin1 = 'Region IV-A' THEN 'Region IV-A (CALABARZON)'
+                        WHEN admin1 = 'Region IV-B' THEN 'Region IV-B (MIMAROPA)'
+                        WHEN admin1 = 'Region V' THEN 'Region V (BICOL)'
+                        WHEN admin1 = 'Region VI' THEN 'Region VI (WESTERN VISAYAS)'
+                        WHEN admin1 = 'Region VII' THEN 'Region VII (CENTRAL VISAYAS)'
+                        WHEN admin1 = 'Region VIII' THEN 'Region VIII (EASTERN VISAYAS)'
+                        WHEN admin1 = 'Region IX' THEN 'Region IX (ZAMBOANGA PENINSULA)'
+                        WHEN admin1 = 'Region X' THEN 'Region X (NORTHERN MINDANAO)'
+                        WHEN admin1 = 'Region XI' THEN 'Region XI (DAVAO REGION)'
+                        WHEN admin1 = 'Region XII' THEN 'Region XII (SOCCSKSARGEN)'
+                        WHEN admin1 = 'Region XIII' THEN 'Region XIII (CARAGA)'
+                        ELSE admin1
+                        END AS region_text
+                        FROM markets
+                        WHERE admin1 in :region_values
+                        ORDER BY admin1;
+                        """), "region_values", "region_text")
 
-        ######## BUILD  THE SELECTED REGIONS ########
-        region_texts = []
-        if selected_region_values:
-            region_result = connection.execute(
-                text("""
-                    SELECT DISTINCT admin1 AS region_value,
-                    CASE
-                    WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
-                    WHEN admin1 = 'Cordillera Administrative region' THEN 'Cordillera Administrative region (CAR)'
-                    WHEN admin1 = 'National Capital region' THEN 'National Capital region (NCR)'
-                    WHEN admin1 = 'Region I' THEN 'Region I (ILOCOS REGION)'
-                    WHEN admin1 = 'Region II' THEN 'Region II (CAGAYAN VALLEY)'
-                    WHEN admin1 = 'Region III' THEN 'Region III (CENTRAL LUZON)'
-                    WHEN admin1 = 'Region IV-A' THEN 'Region IV-A (CALABARZON)'
-                    WHEN admin1 = 'Region IV-B' THEN 'Region IV-B (MIMAROPA)'
-                    WHEN admin1 = 'Region V' THEN 'Region V (BICOL)'
-                    WHEN admin1 = 'Region VI' THEN 'Region VI (WESTERN VISAYAS)'
-                    WHEN admin1 = 'Region VII' THEN 'Region VII (CENTRAL VISAYAS)'
-                    WHEN admin1 = 'Region VIII' THEN 'Region VIII (EASTERN VISAYAS)'
-                    WHEN admin1 = 'Region IX' THEN 'Region IX (ZAMBOANGA PENINSULA)'
-                    WHEN admin1 = 'Region X' THEN 'Region X (NORTHERN MINDANAO)'
-                    WHEN admin1 = 'Region XI' THEN 'Region XI (DAVAO REGION)'
-                    WHEN admin1 = 'Region XII' THEN 'Region XII (SOCCSKSARGEN)'
-                    WHEN admin1 = 'Region XIII' THEN 'Region XIII (CARAGA)'
-                    ELSE admin1
-                    END AS region_text
-                    FROM markets
-                    WHERE admin1 in :region_values
-                    ORDER BY admin1;
-                    """).bindparams(bindparam("region_values", expanding=True)),
-                {"region_values": selected_region_values},
-            )
-            region_texts = [
-                row["region_text"] for row in region_result.mappings()
-            ]
+ 
+    #========================================== MULTI-SELECT DROPDOWN DATA ==========================================
+    categories_columns, categories_rows = helpers.fetch_records_static_qry("SELECT * FROM categories")
 
-        ######## CATEGORIES DROPDOWN DATA ########
-        categories_result = connection.execute(
-            text("SELECT * FROM categories"))
-        categories_columns = list(categories_result.keys())
-        categories_rows = [
-            dict(row) for row in categories_result.mappings()
-        ]
-
-        ######## COMMODITIES DROPDOWN DATA ########
-        commodities_query= text("""""")
-        if selected_category_ids:
-            commodities_query = text("""
-                SELECT *
-                FROM commodities
-                WHERE category_id IN :category_ids
-                ORDER BY commodity_name
-            """).bindparams(bindparam("category_ids", expanding=True))
-
-            commodities_result = connection.execute(
-                commodities_query,
-                {"category_ids": selected_category_ids},
-            )
-        else:
-            commodities_result = connection.execute(text("""
-                SELECT *
-                FROM commodities
-                ORDER BY commodity_name
-            """))
-        
-        commodities_rows = [dict(row) for row in commodities_result.mappings()]
-        commodities_columns = list(commodities_result.keys())
-
-        ######## REGION DROPDOWN DATA ########
-        regions_result = connection.execute(text("""SELECT DISTINCT admin1 AS region_value,
+    commodities_columns, commodities_rows = helpers.fetch_records_dynamic_qry("SELECT * FROM commodities", 
+                                                                      "WHERE category_id IN :category_ids",
+                                                                      "ORDER BY commodity_name",
+                                                                      selected_category_ids,
+                                                                      "category_ids"
+                                                                      )
+    
+    regions_columns, regions_rows = helpers.fetch_records_static_qry("""SELECT DISTINCT admin1 AS region_value,
                     CASE
                     WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
                     WHEN admin1 = 'Cordillera Administrative region' THEN 'Cordillera Administrative region (CAR)'
@@ -188,18 +121,66 @@ def index():
                     ELSE admin1
                     END AS region_text
                     FROM markets 
-                    ORDER BY admin1;"""))
-        regions_columns = list(regions_result.keys())
-        regions_rows = [
-                    dict(row) for row in regions_result.mappings()
-                ]
+                    ORDER BY admin1;""")
 
-        markets_result = connection.execute(text("SELECT * FROM markets"))
-        markets_columns = list(markets_result.keys())
-        markets_rows = [
-            dict(row) for row in markets_result.mappings()
-        ]
+    province_columns, province_rows = helpers.fetch_records_dynamic_qry("SELECT DISTINCT admin2 as province_name FROM MARKETS",
+                                                                "WHERE admin1 IN :region_values",
+                                                                "ORDER BY admin2",
+                                                                selected_region_values,
+                                                                "region_values")
+    markets_columns, markets_rows = helpers.fetch_records_dynamic_qry("SELECT DISTINCT market_id, market_name FROM markets",
+                                                              "WHERE admin1 IN :region_values",
+                                                              "ORDER BY market_name",
+                                                              selected_region_values,
+                                                              "region_values")
 
+
+    #========================================== KPI CARDS DATA ==========================================
+    all_data_qry = """WITH all_data_cte AS (
+                        SELECT 
+                            po.price_id,
+                            po.observation_date,
+                            po.market_id,
+                            po.commodity_id,
+                            po.unit,
+                            po.price_flag,
+                            po.price_type,
+                            po.currency,
+                            po.price,
+                            po.usd_price,
+                            com.commodity_name,
+                            cat.category_id,
+                            cat.category_name,
+                            mkt.market_name,
+                            mkt.admin1,
+                            mkt.admin2,
+                            mkt.latitude,
+                            mkt.longitude
+                        FROM price_observations AS po
+                        INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+                        INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+                        INNER JOIN categories AS cat ON com.category_id = cat.category_id
+                    )"""
+
+
+    price_obs_count_qry = all_data_qry + " SELECT COUNT(*) FROM all_data_cte"
+    price_obs_count_filters = {
+        "category_ids": ("category_id IN :category_ids", selected_category_ids),
+        "commodity_ids": ("commodity_id IN :commodity_ids", selected_commodity_ids),
+        "region_values": ("admin1 IN :region_values", selected_region_values),
+        "province_names": ("admin2 IN :province_names", selected_province_values),
+        "market_ids": ("market_id IN :market_ids", selected_market_ids),
+    }
+    price_obs_count = helpers.fetch_single_dynamic_qry(price_obs_count_qry, 
+                                                       price_obs_count_filters, 
+                                                       "")
+    price_obs_count_new = helpers.fetch_single_dynamic_qry(price_obs_count_qry, 
+                                                           price_obs_count_filters, 
+                                                           " observation_date = ( SELECT max(observation_date) FROM price_observations )")
+
+
+    ########## OPEN SUPABASE CONNECTION ##########
+    with db.engine.connect() as connection:
         ########## KPI CARDS #########
         commodities_count = connection.execute(
             text("SELECT COUNT(*) FROM commodities")
@@ -217,13 +198,13 @@ def index():
             text("SELECT COUNT(DISTINCT admin1) FROM markets")
             ).scalar_one()
 
-        price_obs_count = connection.execute(
-            text("SELECT COUNT(*) FROM price_observations")
-            ).scalar_one()
+        # price_obs_count = connection.execute(
+        #     text("SELECT COUNT(*) FROM price_observations")
+        #     ).scalar_one()
 
-        price_obs_count_new = connection.execute(
-            text("SELECT count(*) FROM price_observations WHERE observation_date = ( SELECT max(observation_date) FROM price_observations )")
-        ).scalar_one()
+        # price_obs_count_new = connection.execute(
+        #     text("SELECT count(*) FROM price_observations WHERE observation_date = ( SELECT max(observation_date) FROM price_observations )")
+        # ).scalar_one()
 
 
         price_obs_result = connection.execute(text("""
@@ -265,6 +246,8 @@ def index():
         markets_rows=markets_rows,
         regions_columns=regions_columns,
         regions_rows=regions_rows,
+        province_columns=province_columns,
+        province_rows=province_rows,
         commodities_columns=commodities_columns,
         commodities_rows=commodities_rows,
         observations=price_obs_rows,
@@ -273,7 +256,8 @@ def index():
         commodity_ids=selected_commodity_ids,
         commodity_names=commodity_names,
         region_values=selected_region_values,
-        region_texts=region_texts
+        region_texts=region_texts,
+        province_names=selected_province_values
     )
 
 @app.route('/price-observations')
