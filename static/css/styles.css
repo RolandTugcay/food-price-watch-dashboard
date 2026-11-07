@@ -150,7 +150,7 @@
    ========================================== */
 .main-content .filters {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.5fr 0.5fr;
+    grid-template-columns: 1fr 1fr 0.5fr 0.6fr 1.2fr 1fr 1fr 0.5fr 0.5fr;
     gap: 11px;
     background: #e3e9e4;
     border: 1px solid #e3e9e4;
@@ -178,6 +178,18 @@
     color: #162b26;
     padding: 0 10px;
     outline-color: #236b50;
+}
+
+.main-content .filters .field .date-field {
+    width: 100%;
+    height: 30px;
+    border: 1px solid #e3e9e4;
+    border-radius: 8px;
+    background: #fff;
+    color: #162b26;
+    padding: 0 10px;
+    outline-color: #236b50;
+    font-size: 14px;
 }
 
 /* ==========================================
@@ -398,6 +410,56 @@
     margin-right: 30px;
 }
 
+/* ==========================================
+   CHARTS
+   ========================================== */
+.main-content .charts {
+    display: grid;
+    grid-template-columns: minmax(0, 0.5fr) minmax(240px, 0.5fr);
+    gap: 14px;
+    margin-bottom: 15px;
+}
+
+.main-content .charts .chart-panel {
+    background: #fff;
+    border: 1px solid #e5ece8;
+    border-radius: 11px;
+    padding: 17px 18px;
+    box-shadow: 0 10px 34px rgba(28, 58, 47, .055);
+}
+
+.main-content .charts article {
+    display: block;
+    unicode-bidi: isolate;
+}
+
+.main-content .charts .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.main-content .charts .chart-header h2 {
+    color: #687a73;
+    font-weight: 700;
+    font-size: 11px;
+    margin: 0 0 1px;
+    letter-spacing: -.2px;
+}
+
+.main-content .charts .chart-header p {
+    margin: 0;
+    color: #71817f;
+    font-size: 10px;
+    margin: 0 0 10px;
+}
+
+.main-content .charts .chart-legend {
+    display: flex;
+    gap: 13px;
+    color: #71817f;
+    font-size: 9px;
+}
 
 
 /* ==========================================

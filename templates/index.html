@@ -23,8 +23,7 @@
         <div class="container-fluid">
             <form name="filters" method="get" action="{{ url_for('index') }}">
                 <section class="filters" id="filters">
-                    
-                    <!-- DROPDOWN 1: categories -->
+                    <!-- DROPDOWN: categories -->
                     <div class="form-group">
                         <label class="dropdown-label">Category</label>
                         <div class="multiselect-container">
@@ -49,7 +48,7 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 2: commodities -->
+                    <!-- DROPDOWN: commodities -->
                     <div class="form-group">
                         <label class="dropdown-label">Commodity</label>
                         <div class="multiselect-container"> 
@@ -77,7 +76,65 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 3: regions -->
+                    <!-- DROPDOWN: Unit -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Unit</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ unit_values|join(', ') }}" placeholder="Units..." readonly>
+                                <span class="arrow"></span>
+                            </div>
+                            <input type="hidden" class="hidden-ids-input" name="unit_values" value="{{ request.args.get('unit_values', '') }}">
+                            <div class="dropdown-panel">
+                                {% for unit in units_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="child-checkbox" data-id="{{ unit.unit }}" value="{{ unit.unit }}"
+                                        {% if unit_values %}
+                                            {% if unit.unit in unit_values %}
+                                                checked
+                                            {% endif %}
+                                        {% else %}
+                                            {% if unit.unit == 'KG' %}
+                                                checked
+                                            {% endif %}
+                                        {% endif %}>
+                                        {{ unit.unit }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN: Price Type -->
+                    <div class="form-group">
+                        <label class="dropdown-label">Price Type</label>
+                        <div class="multiselect-container">
+                            <div class="select-box combo-header">
+                                <input type="text" class="display-textbox" value="{{ price_type_values|join(', ') }}" placeholder="Price types..." readonly>
+                                <span class="arrow"></span>
+                            </div>
+                            <input type="hidden" class="hidden-ids-input" name="price_type_values" value="{{ request.args.get('price_type_values', '') }}">
+                            <div class="dropdown-panel">
+                                {% for price_type in price_types_rows %}
+                                <label class="option-item">
+                                    <input type="checkbox" class="child-checkbox" data-id="{{ price_type.price_type }}" value="{{ price_type.price_type }}"
+                                    {% if price_type_values %}    
+                                        {% if price_type.price_type in price_type_values %}
+                                            checked
+                                        {% endif %}
+                                    {% else %}
+                                        {% if price_type.price_type == 'Retail' %}
+                                            checked
+                                        {% endif %}
+                                    {% endif %}>
+                                    {{ price_type.price_type }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN: regions -->
                     <div class="form-group">
                         <label class="dropdown-label">Region</label>
                         <div class="multiselect-container">
@@ -102,7 +159,7 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 4: province -->
+                    <!-- DROPDOWN: province -->
                     <div class="form-group">
                         <label class="dropdown-label">Province</label>
                         <div class="multiselect-container">
@@ -130,7 +187,7 @@
                         </div>
                     </div>
 
-                    <!-- DROPDOWN 5: markets -->
+                    <!-- DROPDOWN: markets -->
                     <div class="form-group">
                         <label class="dropdown-label">Market</label>
                         <div class="multiselect-container"> 
@@ -160,33 +217,66 @@
 
                     <div class="field">
                         <label for="from">From</label>
-                        <input id="from" type="date">
+                        <input class="date-field" id="filter_date_from" name="filter_date_from" type="date" value="{{ filter_date_from }}">
                     </div>
                     <div class="field">
                         <label for="to">To</label>
-                        <input id="to" type="date">
+                        <input class="date-field" id="filter_date_to" name="filter_date_to" type="date" value="{{ filter_date_to }}">
                     </div>
                 </section>
-            <button type="submit">Filter</button>
             </form>
             <section class="kpis">
                 <div class="kpi">
-                    <div class="kpi-label">Change vs prior month</div>
-                    <div class="kpi-value" id="change">—</div>
-                    <div class="kpi-sub">Based on monthly averages</div>
+                    <div class="kpi-label">Latest Average Price</div>
+                    <div class="kpi-value" id="change">&#8369;{{ "%.2f"|format(this_mo_avg_prc) }}</div>
+                    <div class="kpi-sub">
+                        {% if avg_prc_pct_change is not none %}
+                            {% if avg_prc_pct_change < 0 %}
+                                <span style="color: green; font-weight: bold">
+                                    <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                            {% elif avg_prc_pct_change > 0 %}
+                                <span style="color: red; font-weight: bold">
+                                    <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                            {% else %}
+                                <span style="color: black; font-weight: bold">
+                                    <i class="bi bi-dash" aria-hidden="true"></i>
+                            {% endif %}
+                            {{ "%.2f"|format(avg_prc_pct_change) }}%</span>
+                        {% else %}
+                        <span><i class="bi bi-dash" aria-hidden="true"></i></span>
+                        {% endif %}
+                        &nbsp;previous month
+                    </div>
                 </div>
                 <div class="kpi">
                     <div class="kpi-label">Traced Commodities</div>
                     <div class="kpi-value" id="commodities_count">{{commodities_count}}</div>
-                    <div class="kpi-sub" id="category_count">Accross {{category_count}} food categories</div>
+                    <div class="kpi-sub" id="category_count">
+                        {% if filtered_cat_com %}
+                        In current selection 
+                        {% else %}
+                        Accross {{category_count}} food categories
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="kpi">
                     <div class="kpi-label">Markets covered</div>
                     <div class="kpi-value" id="market_count">{{market_count}}</div>
-                    <div class="kpi-sub">Accross {{ "{:,}".format(region_count|int)}} regions</div>
+                    <div class="kpi-sub">
+                        {% if filtered_reg_prov_mkt %}
+                        In current selection
+                        {% else %}
+                        Accross {{ "{:,}".format(region_count|int)}} regions
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="kpi">
-                    <div class="kpi-label">Price Observations</div>
+                    <div class="kpi-label">Price Observations
+                        {% if filtered_cat_com or filtered_reg_prov_mkt %}
+                        | In current selection
+                        {% else %}
+                        {% endif %}
+                    </div>
                     <div class="kpi-value" id="price_obs_count">
                         <span class="kpi-value1">{{ "{:,}".format(price_obs_count|int) }}</span>
                         <span class="kpi-value2">{{ "{:,}".format(price_obs_count_new|int) }}</span>
@@ -197,10 +287,48 @@
                     </div>
                 </div>
             </section>
+            <section class="charts">
+                <article class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Monthly Price Trend by Category</h2>
+                            <p>Average of commodities price trend (%)</p>
+                        </div>
+                    </div>
+                    <div class="chart-legend">
+                        
+                    </div>
+                    <div class="chart-container">
+                            <canvas id="categoryMonthlyTrendChart"></canvas>
+                    </div>
+                </article>
+                <article class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Highest Price Increases</h2>
+                            <p>Top commodities with highest average price increases in the latest selected month</p>
+                        </div>
+                    </div>
+                    <div class="chart-legend">
+                        
+                    </div>
+                    <div class="chart-container">
+                            <canvas id="highestPriceIncreasesChart"></canvas>
+                    </div>
+                </article>
+            </section>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/overview.js') }}" defer></script>
+    <script id="monthly-trend-data" type="application/json">
+        {{ monthly_trend_chart | tojson }}
+    </script>
+    <script id="highest-price-increases-data" type="application/json">
+        {{ price_increase_chart | tojson }}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
 </body>
 </html>
 
