@@ -1,13 +1,33 @@
+region_case_statements = """
+CASE
+    WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
+    WHEN admin1 = 'Cordillera Administrative region' THEN 'Cordillera Administrative region (CAR)'
+    WHEN admin1 = 'National Capital region' THEN 'National Capital region (NCR)'
+    WHEN admin1 = 'Region I' THEN 'Region I (ILOCOS REGION)'
+    WHEN admin1 = 'Region II' THEN 'Region II (CAGAYAN VALLEY)'
+    WHEN admin1 = 'Region III' THEN 'Region III (CENTRAL LUZON)'
+    WHEN admin1 = 'Region IV-A' THEN 'Region IV-A (CALABARZON)'
+    WHEN admin1 = 'Region IV-B' THEN 'Region IV-B (MIMAROPA)'
+    WHEN admin1 = 'Region V' THEN 'Region V (BICOL)'
+    WHEN admin1 = 'Region VI' THEN 'Region VI (WESTERN VISAYAS)'
+    WHEN admin1 = 'Region VII' THEN 'Region VII (CENTRAL VISAYAS)'
+    WHEN admin1 = 'Region VIII' THEN 'Region VIII (EASTERN VISAYAS)'
+    WHEN admin1 = 'Region IX' THEN 'Region IX (ZAMBOANGA PENINSULA)'
+    WHEN admin1 = 'Region X' THEN 'Region X (NORTHERN MINDANAO)'
+    WHEN admin1 = 'Region XI' THEN 'Region XI (DAVAO REGION)'
+    WHEN admin1 = 'Region XII' THEN 'Region XII (SOCCSKSARGEN)'
+    WHEN admin1 = 'Region XIII' THEN 'Region XIII (CARAGA)'
+    ELSE admin1
+END AS region_text
+"""
+
 trend_top_qry = """
-WITH monthly_series_prices AS (
+WITH monthly_series_prices AS MATERIALIZED (
     SELECT
         DATE_TRUNC('month', observation_date)::date AS observation_date,
         category_id,
-        category_name,
         commodity_id,
-        commodity_name,
         market_id,
-        market_name,
         unit,
         price_type,
         currency,
@@ -17,19 +37,16 @@ WITH monthly_series_prices AS (
 
 trend_next_qry = """
 GROUP BY
-        DATE_TRUNC('month', observation_date)::date,
-        category_id,
-        category_name,
-        commodity_id,
-        commodity_name,
-        market_id,
-        market_name,
-        unit,
-        price_type,
-        currency
+    DATE_TRUNC('month', observation_date)::date,
+    category_id,
+    commodity_id,
+    market_id,
+    unit,
+    price_type,
+    currency
 ),
 
-first_month_per_series AS (
+first_month_per_series AS MATERIALIZED (
     SELECT DISTINCT ON (
         category_id, commodity_id, market_id, unit, price_type, currency
     )
@@ -39,42 +56,35 @@ first_month_per_series AS (
         unit,
         price_type,
         currency,
-        avg_price AS base_price
+        avg_price AS base_price,
+        COUNT(*) OVER (
+            PARTITION BY category_id, commodity_id, market_id, unit, price_type, currency
+        ) AS month_count
     FROM monthly_series_prices
     ORDER BY
         category_id, commodity_id, market_id, unit, price_type, currency,
         observation_date
 ),
 
-category_base_price AS (
+category_base_price AS MATERIALIZED (
     SELECT
-        m.category_id,
-        m.category_name,
-        m.unit,
-        m.price_type,
-        m.currency,
-        AVG(b.base_price) AS base_avg_price
-    FROM first_month_per_series AS b
-    JOIN monthly_series_prices AS m
-    ON m.category_id = b.category_id
-    AND m.commodity_id = b.commodity_id
-    AND m.market_id = b.market_id
-    AND m.unit = b.unit
-    AND m.price_type = b.price_type
-    AND m.currency = b.currency
+        category_id,
+        unit,
+        price_type,
+        currency,
+        SUM(base_price * month_count) / SUM(month_count) AS base_avg_price
+    FROM first_month_per_series
     GROUP BY
-        m.category_id,
-        m.category_name,
-        m.unit,
-        m.price_type,
-        m.currency
+        category_id,
+        unit,
+        price_type,
+        currency
 ),
 
-monthly_category_prices AS (
+monthly_category_prices AS MATERIALIZED (
     SELECT
         observation_date,
         category_id,
-        category_name,
         unit,
         price_type,
         currency,
@@ -83,19 +93,18 @@ monthly_category_prices AS (
     GROUP BY
         observation_date,
         category_id,
-        category_name,
         unit,
         price_type,
         currency
 ),
 
-monthly_category_trend AS (
+monthly_category_trend AS MATERIALIZED (
     SELECT
         DENSE_RANK() OVER (ORDER BY m.observation_date DESC) as date_rank,
         m.observation_date,
         TO_CHAR(m.observation_date, 'YYYY-MM') AS observation_month,
         m.category_id,
-        m.category_name,
+        c.category_name,
         m.unit,
         m.price_type,
         m.currency,
@@ -105,15 +114,16 @@ monthly_category_trend AS (
     FROM monthly_category_prices AS m
     JOIN category_base_price AS b
     ON m.category_id = b.category_id
-    AND m.category_name = b.category_name
     AND m.unit = b.unit
     AND m.price_type = b.price_type
     AND m.currency = b.currency
+    JOIN categories AS c
+    ON m.category_id = c.category_id
 )
 """
 
 price_increase_top_qry = """
-WITH price_obs_data AS (
+WITH price_obs_data AS MATERIALIZED (
     SELECT
         DENSE_RANK() OVER (ORDER BY observation_date DESC) as date_rank,
         observation_date,
@@ -134,7 +144,7 @@ price_increase_addtl_cond = """observation_date in (:obs_date_1,:obs_date_2,:pre
 
 price_increase_bottom_qry = """
 ),
-	joined_data AS (
+	joined_data AS MATERIALIZED (
 	SELECT
 		a.category_id,
 		a.category_name,

@@ -6,6 +6,7 @@
     <title>Food Price Watch</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
 </head>
 <body>
@@ -296,7 +297,7 @@
                         </div>
                     </div>
                     <div class="chart-legend">
-                        
+
                     </div>
                     <div class="chart-container">
                             <canvas id="categoryMonthlyTrendChart"></canvas>
@@ -310,10 +311,37 @@
                         </div>
                     </div>
                     <div class="chart-legend">
-                        
+
                     </div>
                     <div class="chart-container">
                             <canvas id="highestPriceIncreasesChart"></canvas>
+                    </div>
+                </article>
+            </section>
+            <section class="charts">
+                <article class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Regional Price Comparison</h2>
+                            <p>Average prices by region</p>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                            <canvas id="regionalPriceComparisonChart"></canvas>
+                    </div>
+                </article>
+                <article class="chart-panel">
+                    <div class="chart-header">
+                        <div>
+                            <h2>Provincial Price Comparison</h2>
+                            <p>Average prices by province</p>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                            <div
+                                id="provincePriceMap"
+                                data-geojson-base-url="{{ url_for('static', filename='json/regions/placeholder.json').rsplit('/', 1)[0] }}/">
+                            </div>
                     </div>
                 </article>
             </section>
@@ -327,8 +355,17 @@
     <script id="highest-price-increases-data" type="application/json">
         {{ price_increase_chart | tojson }}
     </script>
+    <script id="regional-price-comparison-data" type="application/json">
+        {{ reg_prc_comp_chart | tojson }}
+    </script>
+    <script id="province-price-map-data" type="application/json">
+        {{ map_chart_rows | tojson }}
+    </script>
+    <script id="region-geojson-files" type="application/json">
+        {{ region_geojson_files | tojson }}
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
 </body>
 </html>
-

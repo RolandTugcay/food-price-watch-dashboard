@@ -105,7 +105,7 @@
 
 .sidebar .nav-footer .pipeline-card strong {
     display: block;
-    font-size: 11px;
+    font-size: 9px;
     margin-top: 5px;
     color: #fff;
 }
@@ -461,6 +461,11 @@
     font-size: 9px;
 }
 
+/* Provincial Price Comparison map chart*/
+#provincePriceMap {
+    height: 420px;
+    width: 100%;
+}
 
 /* ==========================================
    ADJUST CONTENT FOR SMALLER SCREENS

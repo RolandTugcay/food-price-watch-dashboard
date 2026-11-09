@@ -4,6 +4,7 @@ from dateutil.relativedelta import relativedelta
 from flask import Flask, request, jsonify, render_template
 from sqlalchemy import text
 from src.connection import database_url, db
+from pathlib import Path
 import src.helpers as helpers
 import src.sql_txt as sql_txt
 
@@ -87,30 +88,11 @@ def index():
                     """), "commodity_ids", "commodity_name")
 
 
-    region_case_statements = """CASE
-                            WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
-                            WHEN admin1 = 'Cordillera Administrative region' THEN 'Cordillera Administrative region (CAR)'
-                            WHEN admin1 = 'National Capital region' THEN 'National Capital region (NCR)'
-                            WHEN admin1 = 'Region I' THEN 'Region I (ILOCOS REGION)'
-                            WHEN admin1 = 'Region II' THEN 'Region II (CAGAYAN VALLEY)'
-                            WHEN admin1 = 'Region III' THEN 'Region III (CENTRAL LUZON)'
-                            WHEN admin1 = 'Region IV-A' THEN 'Region IV-A (CALABARZON)'
-                            WHEN admin1 = 'Region IV-B' THEN 'Region IV-B (MIMAROPA)'
-                            WHEN admin1 = 'Region V' THEN 'Region V (BICOL)'
-                            WHEN admin1 = 'Region VI' THEN 'Region VI (WESTERN VISAYAS)'
-                            WHEN admin1 = 'Region VII' THEN 'Region VII (CENTRAL VISAYAS)'
-                            WHEN admin1 = 'Region VIII' THEN 'Region VIII (EASTERN VISAYAS)'
-                            WHEN admin1 = 'Region IX' THEN 'Region IX (ZAMBOANGA PENINSULA)'
-                            WHEN admin1 = 'Region X' THEN 'Region X (NORTHERN MINDANAO)'
-                            WHEN admin1 = 'Region XI' THEN 'Region XI (DAVAO REGION)'
-                            WHEN admin1 = 'Region XII' THEN 'Region XII (SOCCSKSARGEN)'
-                            WHEN admin1 = 'Region XIII' THEN 'Region XIII (CARAGA)'
-                            ELSE admin1
-                            END AS region_text"""
+    
     
     region_texts = helpers.records_to_array_from_ids(selected_region_values, text("""
                         SELECT DISTINCT admin1 AS region_value, 
-                        """ + region_case_statements + """ 
+                        """ + sql_txt.region_case_statements + """ 
                         FROM markets
                         WHERE admin1 in :region_values
                         ORDER BY admin1;
@@ -135,7 +117,7 @@ def index():
                                                                       )
     
     regions_columns, regions_rows = helpers.fetch_records_static_qry("""SELECT DISTINCT admin1 AS region_value, 
-                    """ + region_case_statements + """ 
+                    """ + sql_txt.region_case_statements + """ 
                     FROM markets 
                     ORDER BY admin1;""")
 
@@ -144,6 +126,7 @@ def index():
                                                                 "ORDER BY admin2",
                                                                 selected_region_values,
                                                                 "region_values")
+    
     markets_columns, markets_rows = helpers.fetch_records_dynamic_qry("SELECT DISTINCT market_id, market_name FROM markets",
                                                               "WHERE admin2 IN :province_names",
                                                               "ORDER BY market_name",
@@ -272,6 +255,56 @@ def index():
         },
     )
 
+    #========================= REGIONAL PRICE COMPARISON CHART DATA ==========================
+    reg_prc_comp_chart_col, reg_prc_comp_chart_rows = helpers.fetch_chart_data_dynamic_qry(
+        base_qry="""
+        SELECT
+            admin1 as region,
+            AVG(price) as "Average Price"
+        FROM v_price_observations
+        """,
+        filters=filters_chart,
+        addtl_cond_qry=None,
+        addtl_qry="""GROUP BY admin1 ORDER BY 2 DESC""",
+        addtl_params=None
+    )
+
+    reg_prc_comp_chart = helpers.to_chart_data(
+        reg_prc_comp_chart_rows,
+        x_column="region",
+        series_column=None,
+        value_column="Average Price"
+    )
+
+    #========================= MAP CHART DATA ==========================
+
+    map_chart_col, map_chart_rows = helpers.fetch_chart_data_dynamic_qry(
+        base_qry="""SELECT admin2 AS province, AVG(PRICE) AS avg_price FROM v_price_observations""",
+        filters=filters_chart,
+        addtl_cond_qry=None,
+        addtl_qry="""GROUP BY admin2""",
+        addtl_params=None
+    )
+
+    # Retrive the geometry json files inside ..\static\json\regions
+    region_dir = Path(app.static_folder) / "json" / "regions"
+    region_geojson_files = sorted(path.name for path in region_dir.glob("*.json"))
+
+
+    #========================================== PIPELINE STATUS ==========================================
+    lat_sync = helpers.fetch_single_static_qry(
+    """
+    SELECT 
+        TO_CHAR(
+            MAX(finished_at) AT TIME ZONE 'Asia/Manila', 
+            'YYYY-MM-DD HH12:MI AM'
+        )
+    FROM github_runs
+    """
+    )
+
+    lat_obs_date = helpers.fetch_single_static_qry("SELECT MAX(observation_date) FROM price_observations")
+
     #========================= RENDER TEMPLATE ==========================
     return render_template(
         "index.html",
@@ -313,7 +346,12 @@ def index():
         prev_mo_avg_prc=prev_mo_avg_prc,
         avg_prc_pct_change=avg_prc_pct_change,
         monthly_trend_chart=monthly_trend_chart,
-        price_increase_chart=price_increase_chart
+        price_increase_chart=price_increase_chart,
+        reg_prc_comp_chart=reg_prc_comp_chart,
+        map_chart_rows=map_chart_rows,
+        region_geojson_files=region_geojson_files,
+        lat_sync=lat_sync,
+        lat_obs_date=lat_obs_date
     )
 
 @app.route('/price-observations')
