@@ -206,3 +206,100 @@ WHERE exclude = 'N'
 GROUP BY commodity_name 
 ORDER BY 2 DESC LIMIT 10
 """
+
+price_observations_qry = """
+WITH lag_price_cte AS (
+    SELECT
+        po.price_id,
+	    com.commodity_id,
+	    com.commodity_name,
+	    cat.category_name,
+	    mkt.admin1 AS region,
+	    mkt.market_name,
+	    po.observation_date,
+		po.unit,
+	    po.price_type,
+		po.price,
+        LAG(po.price) OVER (
+            PARTITION BY mkt.market_name, com.commodity_name, po.unit, po.price_type
+            ORDER BY po.observation_date
+        ) AS prev_price
+    FROM price_observations AS po
+    INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+    INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+    INNER JOIN categories AS cat ON com.category_id = cat.category_id
+)
+SELECT
+    price_id,
+    commodity_id,
+    commodity_id || '-' || REPLACE(REGEXP_REPLACE(LOWER(commodity_name),'[^\w ]+', '', 'g'),' ','-') AS icon_name,
+    commodity_name,
+    category_name,
+    region,
+    market_name,
+    observation_date,
+    price_type,
+    ROUND(price, 2) || ' / ' || unit AS price,
+    ROUND(prev_price, 2) || ' / ' || unit AS prev_price,
+    ROUND(((price - prev_price) / NULLIF(prev_price, 0)) * 100, 2) AS change_pct
+FROM lag_price_cte
+WHERE
+    commodity_name ILIKE '%' || :search || '%'
+    OR region ILIKE '%' || :search || '%'
+    OR market_name ILIKE '%' || :search || '%'
+    OR price_type ILIKE '%' || :search || '%'
+    OR CAST(observation_date AS TEXT) ILIKE '%' || :search || '%'
+ORDER BY CAST(observation_date AS TEXT) DESC, price_id DESC
+LIMIT :limit OFFSET :offset
+"""
+
+
+price_observations_count_qry = """
+SELECT COUNT(*)
+FROM price_observations AS po
+INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+INNER JOIN categories AS cat ON com.category_id = cat.category_id     
+WHERE
+    com.commodity_name ILIKE '%' || :search || '%'
+    OR mkt.admin1 ILIKE '%' || :search || '%'
+    OR mkt.market_name ILIKE '%' || :search || '%'
+    OR po.price_type ILIKE '%' || :search || '%'
+    OR CAST(po.observation_date AS TEXT) ILIKE '%' || :search || '%'
+"""
+
+com_price_trend_qry = """
+WITH cur_year_data_cte AS (
+	SELECT
+	    po.observation_date,
+		TO_CHAR(po.observation_date, 'MM-Month') as month,
+	    po.price
+	FROM price_observations AS po
+	INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+	WHERE 
+	    EXTRACT(YEAR FROM po.observation_date) = :cur_year AND
+	    po.commodity_id = :commodity_id AND
+	    mkt.market_name = :market_name
+	ORDER BY po.observation_date
+),
+prev_year_data_cte AS (
+	SELECT
+	    po.observation_date,
+		TO_CHAR(po.observation_date, 'MM-Month') as month,
+	    po.price
+	FROM price_observations AS po
+	INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+	WHERE 
+	    EXTRACT(YEAR FROM po.observation_date) = :prev_year AND
+	    po.commodity_id = :commodity_id AND
+	    mkt.market_name = :market_name
+	ORDER BY po.observation_date
+)
+SELECT 
+	COALESCE(cur.month, prev.month) AS month,
+    COALESCE(cur.price, NULL) AS cur_year,
+    prev.price AS prev_year
+FROM cur_year_data_cte AS cur
+RIGHT JOIN prev_year_data_cte AS prev 
+	ON cur.month = prev.month
+"""

@@ -1,4 +1,6 @@
 import os
+import json
+from datetime import date
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from flask import Flask, request, jsonify, render_template
@@ -290,22 +292,10 @@ def index():
     region_dir = Path(app.static_folder) / "json" / "regions"
     region_geojson_files = sorted(path.name for path in region_dir.glob("*.json"))
 
-
     #========================================== PIPELINE STATUS ==========================================
-    lat_sync = helpers.fetch_single_static_qry(
-    """
-    SELECT 
-        TO_CHAR(
-            MAX(finished_at) AT TIME ZONE 'Asia/Manila', 
-            'YYYY-MM-DD HH12:MI AM'
-        )
-    FROM github_runs
-    """
-    )
+    latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
 
-    lat_obs_date = helpers.fetch_single_static_qry("SELECT MAX(observation_date) FROM price_observations")
-
-    #========================= RENDER TEMPLATE ==========================
+    #========================================== RENDER TEMPLATE ==========================================
     return render_template(
         "index.html",
         categories_columns=categories_columns,
@@ -350,13 +340,89 @@ def index():
         reg_prc_comp_chart=reg_prc_comp_chart,
         map_chart_rows=map_chart_rows,
         region_geojson_files=region_geojson_files,
-        lat_sync=lat_sync,
-        lat_obs_date=lat_obs_date
+        latest_sync=latest_sync,
+        latetst_obs_date=latest_obs_date
     )
 
 @app.route('/price-observations')
 def price_observations():
-    return render_template('price-observations.html')
+
+    #========================= POPULATE PRICE OBSEVATIONS TABLE =========================
+    search = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
+
+    price_observations_col, price_observations_rows, price_observations_pagination = helpers.fetch_paginated_records(
+        count_qry=sql_txt.price_observations_count_qry,
+        data_qry=sql_txt.price_observations_qry,
+        page=page,
+        per_page=10,
+        params={"search": search}
+    )
+
+    #========================= PRICE TREND CHART DATA =========================
+    selected_observation = request.args.get("selected_observation", "")
+    selection = json.loads(selected_observation) if selected_observation else {}
+    price_id = selection.get("price_id")
+    commodity_id = selection.get("commodity_id")
+    commodity_name = selection.get("commodity_name")
+    market_name = selection.get("market_name")
+    icon_name = selection.get("icon_name")
+
+    observation_date = selection.get("date")
+
+    if observation_date:
+        observation_date = date.fromisoformat(observation_date)
+        cur_year = observation_date.strftime("%Y")
+        prev_year = (observation_date - relativedelta(years=1)).strftime("%Y")
+    else:
+        observation_date = None
+        cur_year = None
+        prev_year = None
+
+    com_price_trend_cols, com_price_trend_rows = helpers.fetch_chart_data_dynamic_qry(
+        base_qry=sql_txt.com_price_trend_qry,
+        filters=None,
+        addtl_cond_qry=None,
+        addtl_qry=None,
+        addtl_params={
+            "cur_year": cur_year,
+            "prev_year": prev_year,
+            "commodity_id": commodity_id,
+            "market_name": market_name,
+        },
+    )
+
+    com_price_trend_chart_data = helpers.to_chart_data(
+        com_price_trend_rows,
+        x_column="month",
+        series_column=None,  
+        value_columns=["cur_year", "prev_year"],
+        value_labels={
+            "cur_year": cur_year,
+            "prev_year": prev_year,
+        },
+        
+    )
+
+
+    #========================================== PIPELINE STATUS ==========================================
+    latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
+
+    return render_template(
+        "price-observations.html",
+        price_observations_col=price_observations_col,
+        price_observations_rows=price_observations_rows,
+        search=search,
+        **price_observations_pagination,
+        latest_sync=latest_sync,
+        latest_obs_date=latest_obs_date,
+        com_price_trend_chart_data=com_price_trend_chart_data,
+        price_id=price_id,
+        commodity_id=commodity_id,
+        commodity_name=commodity_name,
+        market_name=market_name,
+        icon_name=icon_name
+    )
 
 @app.route('/commodities')
 def commodities():

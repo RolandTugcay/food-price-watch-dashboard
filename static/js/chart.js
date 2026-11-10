@@ -344,3 +344,49 @@ function addLegend(map, minPrice, maxPrice, hasPrices) {
 
     legend.addTo(map);
 }
+
+
+// Commodity Price Trend Chart 
+const comPriceTrendDataElement = document.getElementById("com-price-trend-data");
+const comPriceTrendDataCanvas = document.getElementById("commodityPriceTrendCanvas");
+
+if (comPriceTrendDataElement && comPriceTrendDataCanvas) {
+    const comPriceTrendChart = JSON.parse(comPriceTrendDataElement.textContent);
+    const firstDataset = comPriceTrendChart.datasets[0];
+
+    if (firstDataset) {
+        const sortedIndexes = comPriceTrendChart.labels
+            .map((_, index) => index)
+            .sort((a, b) => firstDataset.data[b] - firstDataset.data[a]);
+
+        comPriceTrendChart.labels = sortedIndexes.map(
+            index => comPriceTrendChart.labels[index]
+        );
+        comPriceTrendChart.datasets.forEach(dataset => {
+            dataset.data = sortedIndexes.map(index => dataset.data[index]);
+        });
+    }
+
+    new Chart(comPriceTrendDataCanvas, {
+        type: "bar",
+        data: comPriceTrendChart,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true
+                },
+            },
+            elements: {
+                bar: {
+                    borderWidth: 2
+                }
+            }
+        }
+    });
+}

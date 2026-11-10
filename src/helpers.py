@@ -1,3 +1,4 @@
+import math
 from sqlalchemy import text, bindparam
 from src.connection import db
 from collections import defaultdict
@@ -99,7 +100,7 @@ def fetch_chart_data_dynamic_qry(
     conditions = []
     params = dict(addtl_params or {})
 
-    for param_name, (condition, values) in filters.items():
+    for param_name, (condition, values) in (filters or {}).items():
         if values:
             conditions.append(condition)
             params[param_name] = values
@@ -225,3 +226,55 @@ def to_chart_data(
         "labels": x_values,
         "datasets": datasets,
     }
+
+
+
+def fetch_paginated_records(
+    count_qry,
+    data_qry,
+    page=1,
+    per_page=20,
+    params=None,
+):
+    page = max(int(page or 1), 1)
+    per_page = max(int(per_page or 20), 1)
+    offset = (page - 1) * per_page
+
+    query_params = dict(params or {})
+    query_params.update({"limit": per_page, "offset": offset})
+
+    with db.engine.connect() as connection:
+        total_rows = connection.execute(
+            text(count_qry),
+            params or {},
+        ).scalar_one()
+
+        result = connection.execute(text(data_qry), query_params)
+        columns = list(result.keys())
+        rows = [dict(row) for row in result.mappings()]
+
+    total_pages = max(1, math.ceil(total_rows / per_page))
+
+    return columns, rows, {
+        "page": page,
+        "per_page": per_page,
+        "total_rows": total_rows,
+        "total_pages": total_pages,
+    }
+
+
+def fetch_latest_sync_obs_date():
+    lat_sync = fetch_single_static_qry(
+    """
+    SELECT 
+        TO_CHAR(
+            MAX(finished_at) AT TIME ZONE 'Asia/Manila', 
+            'YYYY-MM-DD HH12:MI AM'
+        )
+    FROM github_runs
+    """
+    )
+
+    lat_obs_date = fetch_single_static_qry("SELECT MAX(observation_date) FROM price_observations")
+
+    return lat_sync, lat_obs_date

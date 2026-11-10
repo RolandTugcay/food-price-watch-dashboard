@@ -433,6 +433,12 @@
     unicode-bidi: isolate;
 }
 
+.main-content .charts .chart-panel .chart-panel-title{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
 .main-content .charts .chart-header {
     display: flex;
     justify-content: space-between;
@@ -458,13 +464,142 @@
     display: flex;
     gap: 13px;
     color: #71817f;
-    font-size: 9px;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 /* Provincial Price Comparison map chart*/
 #provincePriceMap {
     height: 420px;
     width: 100%;
+}
+
+/* ==========================================
+   TABLES
+   ========================================== */
+.table-panel {
+    background: #fff;
+    border: 1px solid #e5ece8;
+    border-radius: 11px;
+    padding: 17px 18px;
+    box-shadow: 0 10px 34px rgba(28, 58, 47, .055);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+.table thead {
+    display: table-header-group;
+    vertical-align: middle;
+    unicode-bidi: isolate;
+    break-inside: if(media(overflow-block: paged): avoid;);
+    border-color: inherit;
+}
+
+.table tr {
+    display: table-row;
+    vertical-align: inherit;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+.table th {
+    text-align: left;
+    color: #83918d;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .65px;
+    font-weight: 700;
+    padding: 10px 9px;
+    border-bottom: 1px solid #e5ece8;
+}
+
+.table tbody {
+    display: table-row-group;
+    vertical-align: middle;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+.table tr {
+    display: table-row;
+    vertical-align: inherit;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+.table td {
+    font-size: 12px;
+    padding: 11px 9px;
+    border-bottom: 1px solid #eff3f0;
+}
+
+.commodity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 650;
+}
+
+.commodity-icon-container{
+    height: 25px;
+    width: 25px;
+    border-radius: 7px;
+    background: #f3f1e7;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+}
+
+.commodity-icon{
+    height: 25px;
+    width: 25px;
+    border-radius: 7px;
+    background: #f3f1e7;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+}
+
+.table .tag{
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 20px;
+    background: #edf5ee;
+    color: #42735e;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.textbox-container{
+    display: flex;
+    justify-content: space-between;
+    justify-self: end;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    height: 30px;
+    background: #fff;
+    color: #162b26;
+    outline-color: #236b50;
+    width: 25%;
+    margin-bottom: 10px;
+}
+
+.textbox{
+    border: none;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+    font-size: 12px;
+    background: transparent;
 }
 
 /* ==========================================
