@@ -5,7 +5,7 @@ A Flask web dashboard for exploring food-price observations across the Philippin
 ## Table of Contents
 
 - [About the Project](#about-the-project)
-- [Data Pipleline](#data-pipiline)
+- [Data Pipleline](#data-pipeline)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
