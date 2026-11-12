@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PH Food Price Watch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
+</head>
+<body>
+    
+    {% include 'navbar.html' %}
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <header class="top">
+                <div class="crumb">Markets</div>
+                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Monthly</div>
+            </header>
+        </div>
+        <div class="container-fluid">
+            <div class="container-row">
+                <div class="container-box">
+                    <section class="table-panel">  
+                        <form id="market-search-form"
+                            method="get"
+                            action="{{ url_for('markets') }}">
+                            <div class="textbox-container">
+                                <input
+                                    class="textbox"
+                                    id="com-search"
+                                    type="search"
+                                    name="q"
+                                    value="{{ search }}"
+                                    placeholder="Search region, province, or market..."
+                                    aria-label="Search markets"
+                                >
+                            </div>
+                            <input type="hidden" id="market-page" name="page" value="{{ page }}">
+                        </form>
+                        <table class="table table-hover" id="markets_table" name="markets_table">
+                            <thead class="table-head">
+                                <tr>
+                                    <th scope="col">
+                                        <a href="{{ url_for(
+                                            'markets',
+                                            page=1,
+                                            q=search,
+                                            sort='region',
+                                            direction='desc' if sort == 'region' and direction == 'asc' else 'asc'
+                                            ) }}">
+                                            Region
+                                        </a>
+                                    </th>
+                                    <th scope="col">
+                                        <a href="{{ url_for(
+                                            'markets',
+                                            page=1,
+                                            q=search,
+                                            sort='province',
+                                            direction='desc' if sort == 'province' and direction == 'asc' else 'asc'
+                                            ) }}">
+                                            Province
+                                        </a>
+                                    </th>
+                                    <th scope="col">
+                                        <a href="{{ url_for(
+                                            'markets',
+                                            page=1,
+                                            q=search,
+                                            sort='market',
+                                            direction='desc' if sort == 'market' and direction == 'asc' else 'asc'
+                                            ) }}">
+                                            Market
+                                        </a>
+                                    </th>
+                                    <th scope="col">
+                                        <a href="{{ url_for(
+                                            'markets',
+                                            page=1,
+                                            q=search,
+                                            sort='record_count',
+                                            direction='desc' if sort == 'record_count' and direction == 'asc' else 'asc'
+                                            ) }}">
+                                            Price Observations<br>Records
+                                        </a>
+                                    </th>
+                                    <th scope="col">
+                                        <a href="{{ url_for(
+                                            'markets',
+                                            page=1,
+                                            q=search,
+                                            sort='com_count',
+                                            direction='desc' if sort == 'com_count' and direction == 'asc' else 'asc'
+                                            ) }}">
+                                            Monitored<br>Commodities Count
+                                        </a>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in markets_rows %}
+                                <tr>
+                                    <td>{{ row.region }}</td>
+                                    <td>{{ row.province }}</td>
+                                    <td>{{ row.market_name }}</td>
+                                    <td>{{ "{:,}".format(row.record_count) }}</td>
+                                    <td>{{ "{:,}".format(row.com_count) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5">No markets found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <nav class="pagination-nav" aria-label="Markets pages">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                                    <a class="page-link"
+                                        href="{{ url_for(
+                                            'markets',
+                                            page=page - 1,
+                                            q=search,
+                                            sort=sort,
+                                            direction=direction
+                                        ) }}">
+                                        Previous
+                                    </a>
+                                </li>
+
+                                <li class="page-item disabled">
+                                    <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
+                                </li>
+
+                                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                    <a class="page-link"
+                                        href="{{ url_for(
+                                            'markets',
+                                            page=page + 1,
+                                            q=search,
+                                            sort=sort,
+                                            direction=direction
+                                        ) }}">
+                                        Next
+                                    </a>
+                                </li>
+                            </ul>
+                            <p class="text-center">Showing {{ markets_rows|length }} of {{ total_rows }} markets</p>
+                        </nav>
+                    </section>
+                </div>
+                <div class="container-box markets-map-box">
+                    <section class="charts">
+                        <article class="chart-panel">
+                            <div class="chart-panel-title">
+                                <div class="chart-header">
+                                    <div>
+                                        <h2 style="margin-bottom: 10px;">Record Distribution by Province</h2>
+                                    </div>
+                                </div>
+                                <div class="chart-legend">
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <div
+                                    id="recordDistByProv"
+                                    data-geojson-base-url="{{ url_for('static', filename='json/regions/placeholder.json').rsplit('/', 1)[0] }}/">
+                                </div>
+                            </div>
+                        </article>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script id="rec-dist-by-prov-data" type="application/json">
+        {{ rec_dist_by_prov_rows | tojson }}
+    </script>
+    <script id="region-geojson-files" type="application/json">
+        {{ region_geojson_files | tojson }}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/markets-chart.js') }}" defer></script>
+</body>
+</html>

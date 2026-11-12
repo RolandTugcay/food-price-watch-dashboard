@@ -249,8 +249,6 @@ WHERE
     OR market_name ILIKE '%' || :search || '%'
     OR price_type ILIKE '%' || :search || '%'
     OR CAST(observation_date AS TEXT) ILIKE '%' || :search || '%'
-ORDER BY CAST(observation_date AS TEXT) DESC, price_id DESC
-LIMIT :limit OFFSET :offset
 """
 
 
@@ -302,4 +300,134 @@ SELECT
 FROM cur_year_data_cte AS cur
 RIGHT JOIN prev_year_data_cte AS prev 
 	ON cur.month = prev.month
+"""
+
+com_price_trend_all_mkt_qry = """
+WITH cur_year_data_cte AS (
+	SELECT
+	    po.observation_date,
+		TO_CHAR(po.observation_date, 'MM-Month') as month,
+	    ROUND(AVG(po.price), 2) AS price
+	FROM price_observations AS po
+	INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+	WHERE 
+	    EXTRACT(YEAR FROM po.observation_date) = :cur_year AND
+	    po.commodity_id = :commodity_id
+	GROUP BY po.observation_date
+	ORDER BY po.observation_date
+),
+prev_year_data_cte AS (
+	SELECT
+	    po.observation_date,
+		TO_CHAR(po.observation_date, 'MM-Month') as month,
+	    ROUND(AVG(po.price), 2) AS price
+	FROM price_observations AS po
+	INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+	WHERE 
+	    EXTRACT(YEAR FROM po.observation_date) = :prev_year AND
+	    po.commodity_id = :commodity_id
+	GROUP BY po.observation_date
+	ORDER BY po.observation_date
+)
+SELECT 
+	COALESCE(cur.month, prev.month) AS month,
+    COALESCE(cur.price, NULL) AS cur_year,
+    prev.price AS prev_year
+FROM cur_year_data_cte AS cur
+RIGHT JOIN prev_year_data_cte AS prev 
+	ON cur.month = prev.month
+"""
+
+uniq_com_per_cat_qry = """
+SELECT 
+    cat.category_name, 
+    COUNT(DISTINCT commodity_id) as "Count"
+FROM commodities AS com
+INNER JOIN categories AS cat
+    ON com.category_id = cat.category_id
+GROUP BY cat.category_name
+"""
+
+data_records_breakdown_qry = """
+SELECT
+    cat.category_name,
+    po.price_type,
+    COUNT(*) AS record_count
+    FROM price_observations AS po
+    INNER JOIN commodities AS com
+        ON po.commodity_id = com.commodity_id
+    INNER JOIN categories AS cat 
+        ON com.category_id = cat.category_id
+    GROUP BY
+        cat.category_name,
+        po.price_type    
+"""
+
+commodities_qry = """
+SELECT 
+    cat.category_name,
+    com.commodity_name,
+    com.commodity_id || '-' || REPLACE(REGEXP_REPLACE(LOWER(com.commodity_name),'[^\w ]+', '', 'g'),' ','-') AS icon_name
+FROM commodities AS com
+INNER JOIN categories AS cat
+ON com.category_id = cat.category_id
+WHERE
+    cat.category_name ILIKE '%' || :search || '%'
+    OR com.commodity_name ILIKE '%' || :search || '%'
+"""
+
+commodities_count_qry = """
+SELECT 
+    COUNT(*)
+FROM commodities AS com
+INNER JOIN categories AS cat
+ON com.category_id = cat.category_id
+WHERE
+    cat.category_name ILIKE '%' || :search || '%'
+    OR com.commodity_name ILIKE '%' || :search || '%'
+"""
+
+markets_qry = """
+SELECT 
+	mkt.market_id,
+	mkt.admin1 AS region,
+	mkt.admin2 AS province,
+	mkt.market_name,
+	COUNT(DISTINCT po.price_id) AS record_count,
+    COUNT(DISTINCT po.commodity_id) AS com_count
+FROM price_observations AS po
+INNER JOIN markets AS mkt
+ON po.market_id = mkt.market_id
+WHERE
+    mkt.admin1 ILIKE '%' || :search || '%'
+    OR mkt.admin1 ILIKE '%' || :search || '%'
+	OR mkt.market_name ILIKE '%' || :search || '%'
+GROUP BY
+	mkt.market_id,
+	mkt.admin1,
+	mkt.admin2,
+	mkt.market_name
+"""
+
+markets_count_qry = """
+SELECT 
+	COUNT(*)
+FROM markets
+WHERE
+    admin1 ILIKE '%' || :search || '%'
+    OR admin2 ILIKE '%' || :search || '%'
+	OR market_name ILIKE '%' || :search || '%'
+"""
+
+markets_geo_chart_qry = """
+SELECT
+    mkt.admin2 AS province,
+    COUNT(DISTINCT po.price_id) AS record_count,
+    COUNT(DISTINCT po.commodity_id) AS com_count
+FROM price_observations AS po
+INNER JOIN markets AS mkt
+    ON po.market_id = mkt.market_id
+WHERE mkt.admin2 IS NOT NULL
+    AND BTRIM(mkt.admin2) <> ''
+GROUP BY mkt.admin2
 """

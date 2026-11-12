@@ -235,21 +235,58 @@ def fetch_paginated_records(
     page=1,
     per_page=20,
     params=None,
+    sort=None,
+    direction="desc",
+    sort_columns=None,
+    default_sort="date",
+    tie_breaker=None,
 ):
     page = max(int(page or 1), 1)
     per_page = max(int(per_page or 20), 1)
     offset = (page - 1) * per_page
+    params = dict(params or {})
+    sort_columns = sort_columns or {}
 
-    query_params = dict(params or {})
-    query_params.update({"limit": per_page, "offset": offset})
+    # Resolve the requested sort key through the allowlist.
+    sort_key = sort if sort in sort_columns else default_sort
+    sort_expression = sort_columns.get(sort_key)
+
+    if not sort_expression:
+        raise ValueError("A valid default sort column is required.")
+
+    # Only allow ASC or DESC in the generated SQL.
+    sort_direction = (
+        "ASC" if str(direction).lower() == "asc" else "DESC"
+    )
+
+    order_clause = f" ORDER BY {sort_expression} {sort_direction}"
+    if tie_breaker:
+        order_clause += f", {tie_breaker}"
+
+    # data_qry must not already contain ORDER BY, LIMIT, or OFFSET.
+    clean_data_qry = data_qry.rstrip().rstrip(";")
+    paginated_qry = (
+        f"{clean_data_qry}{order_clause} "
+        "LIMIT :limit OFFSET :offset"
+    )
+
+    query_params = {
+        **params,
+        "limit": per_page,
+        "offset": offset,
+    }
 
     with db.engine.connect() as connection:
         total_rows = connection.execute(
             text(count_qry),
-            params or {},
+            params,
         ).scalar_one()
 
-        result = connection.execute(text(data_qry), query_params)
+        result = connection.execute(
+            text(paginated_qry),
+            query_params,
+        )
+
         columns = list(result.keys())
         rows = [dict(row) for row in result.mappings()]
 
@@ -260,6 +297,8 @@ def fetch_paginated_records(
         "per_page": per_page,
         "total_rows": total_rows,
         "total_pages": total_pages,
+        "sort": sort_key,
+        "direction": sort_direction.lower(),
     }
 
 

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PH Food Price Watch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"> 
+</head>
+<body>
+    
+    {% include 'navbar.html' %}
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <header class="top">
+                <div class="crumb">Commodities</div>
+                <div class="topnote">Data Source: WFP (World Food Programme) - Refreshed Monthly</div>
+            </header>
+        </div>
+        <div class="container-fluid">
+            <section class="charts">
+                <article class="chart-panel">
+                    <div class="chart-panel-title">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Number of Unique Commodties per Category</h2>
+                            </div>
+                        </div>
+                        <div class="chart-legend">
+                            <div class="commodity">
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="uniqComPerCatCanvas"></canvas>
+                    </div>
+                </article>
+                <article class="chart-panel">
+                    <div class="chart-panel-title">
+                        <div class="chart-header">
+                            <div>
+                                <h2>Data Records Breakdown by Category & Price Type</h2>
+                            </div>
+                        </div>
+                        <div class="chart-legend">
+                            <div class="commodity">
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dataRecordsBreakdownCanvas"></canvas>
+                    </div>
+                </article>
+            </section>
+            <section class="table-panel">  
+                <form id="commodity-search-form"
+                    method="get"
+                    action="{{ url_for('commodities') }}">
+                    <div class="textbox-container">
+                        <input
+                            class="textbox"
+                            id="com-search"
+                            type="search"
+                            name="q"
+                            value="{{ search }}"
+                            placeholder="Search commodity or category..."
+                            aria-label="Search commodities"
+                        >
+                    </div>
+                    <input type="hidden" id="commodity-page" name="page" value="{{ page }}">
+                </form>
+                <table class="table table-hover" id="commodities_table" name="commodities_table">
+                    <thead class="table-head">
+                        <tr>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'commodities',
+                                    page=1,
+                                    q=search,
+                                    sort='category',
+                                    direction='desc' if sort == 'category' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Category
+                                </a>
+                            </th>
+                            <th scope="col">
+                                 <a href="{{ url_for(
+                                    'commodities',
+                                    page=1,
+                                    q=search,
+                                    sort='commodity',
+                                    direction='desc' if sort == 'commodity' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Commodity
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in commodities_rows %}
+                        <tr>
+                            <td>{{ row.category_name }}</td>
+                            <td>
+                                <div class="commodity">
+                                    <span class="commodity-icon-container">
+                                        <img class="commodity-icon" src="/static/images/commodity-icons/{{ row.icon_name }}.png"/>
+                                    </span>
+                                    {{ row.commodity_name }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2">No commodities found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <nav class="pagination-nav" aria-label="Commodities pages">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                            <a class="page-link"
+                                href="{{ url_for(
+                                    'commodities',
+                                    page=page - 1,
+                                    q=search,
+                                    sort=sort,
+                                    direction=direction
+                                ) }}">
+                                Previous
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">Page {{ page }} of {{ total_pages }}</span>
+                        </li>
+
+                        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                            <a class="page-link"
+                                href="{{ url_for(
+                                    'commodities',
+                                    page=page + 1,
+                                    q=search,
+                                    sort=sort,
+                                    direction=direction
+                                ) }}">
+                                Next
+                            </a>
+                        </li>
+                    </ul>
+                    <p class="text-center">Showing {{ commodities_rows|length }} of {{ total_rows }} commodities</p>
+                </nav>
+            </section>
+        </div>
+    </div>
+    
+    <script id="uniq-com-per-cat-data" type="application/json">
+        {{ uniq_com_per_cat_data | tojson }}
+    </script>
+    <script id="data-records-breakdown-data" type="application/json">
+        {{ data_records_breakdown_data | tojson }}
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/commodities-chart.js') }}" defer></script>
+</body>
+</html>

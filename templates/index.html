@@ -347,8 +347,7 @@
             </section>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/overview.js') }}" defer></script>
+    
     <script id="monthly-trend-data" type="application/json">
         {{ monthly_trend_chart | tojson }}
     </script>
@@ -364,8 +363,10 @@
     <script id="region-geojson-files" type="application/json">
         {{ region_geojson_files | tojson }}
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/overview.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/overview-chart.js') }}"></script>
 </body>
 </html>

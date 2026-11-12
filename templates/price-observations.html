@@ -27,6 +27,7 @@
                         <div class="chart-header">
                             <div>
                                 <h2>Price Trend</h2>
+                                <p>Exact price</p>
                             </div>
                         </div>
                         <div class="chart-legend">
@@ -50,6 +51,7 @@
                         <div class="chart-header">
                             <div>
                                 <h2>Price Trend</h2>
+                                <p>Average price across all markets</p>
                             </div>
                         </div>
                         <div class="chart-legend">
@@ -63,7 +65,7 @@
                     </div>
                     <div class="chart-container">
                         <canvas id="commodityPriceTrendAllMktCanvas"></canvas>
-                        <p id="commodity-price-trend-empty" class="chart-empty-state" style="font-size: 11px;">
+                        <p id="commodity-price-trend-all-mkt-empty" class="chart-empty-state" style="font-size: 11px;">
                             Select a row in the below table to view its price trend.
                         </p>
                     </div>
@@ -96,13 +98,83 @@
                     <thead class="table-head">
                         <tr>
                             <th scope="col">View</th>
-                            <th scope="col">Commodity</th>
-                            <th scope="col">Region</th>
-                            <th scope="col">Market</th>
-                            <th scope="col">Date</th>
-                            <th scope="col">Price Type</th>
-                            <th scope="col">Price</th>
-                            <th scope="col">Change %</th>
+                            <th scope="col">
+                                 <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='commodity',
+                                    direction='desc' if sort == 'commodity' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Commodity
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='region',
+                                    direction='desc' if sort == 'region' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Region
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='market',
+                                    direction='desc' if sort == 'market' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Market
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='date',
+                                    direction='desc' if sort == 'date' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Date
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='price_type',
+                                    direction='desc' if sort == 'price_type' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Price Type
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='price',
+                                    direction='desc' if sort == 'price' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Price
+                                </a>
+                            </th>
+                            <th scope="col">
+                                <a href="{{ url_for(
+                                    'price_observations',
+                                    page=1,
+                                    q=search,
+                                    sort='change',
+                                    direction='desc' if sort == 'change' and direction == 'asc' else 'asc'
+                                    ) }}">
+                                    Change %
+                                </a>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -165,11 +237,17 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <nav aria-label="Price observations pages">
+                <nav class="pagination-nav" aria-label="Price observations pages">
                     <ul class="pagination justify-content-center">
                         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
                             <a class="page-link"
-                            href="{{ url_for('price_observations', page=page - 1, q=search) }}">
+                                href="{{ url_for(
+                                    'price_observations',
+                                    page=page - 1,
+                                    q=search,
+                                    sort=sort,
+                                    direction=direction
+                                ) }}">
                                 Previous
                             </a>
                         </li>
@@ -180,7 +258,13 @@
 
                         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
                             <a class="page-link"
-                            href="{{ url_for('price_observations', page=page + 1, q=search) }}">
+                                href="{{ url_for(
+                                    'price_observations',
+                                    page=page + 1,
+                                    q=search,
+                                    sort=sort,
+                                    direction=direction
+                                ) }}">
                                 Next
                             </a>
                         </li>
@@ -190,11 +274,15 @@
             </section>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <script id="com-price-trend-data" type="application/json">
         {{ com_price_trend_chart_data | tojson }}
     </script>
+    <script id="com-price-trend-all-mkt-data" type="application/json">
+        {{ com_price_trend_all_mkt_rows_chart_data | tojson }}
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{{ url_for('static', filename='js/price_observations.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/price-observations.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/price-observations-chart.js') }}" defer></script>
 </body>
 </html>

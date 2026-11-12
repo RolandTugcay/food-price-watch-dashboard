@@ -348,6 +348,16 @@ def index():
 def price_observations():
 
     #========================= POPULATE PRICE OBSEVATIONS TABLE =========================
+    sort_columns = {
+        "commodity": "commodity_name",
+        "region": "region",
+        "market": "market_name",
+        "date": "observation_date",
+        "price_type": "price_type",
+        "price": "lag_price_cte.price",
+        "change": "change_pct",
+    }
+
     search = request.args.get("q", "").strip()
     page = request.args.get("page", 1, type=int)
 
@@ -356,17 +366,35 @@ def price_observations():
         data_qry=sql_txt.price_observations_qry,
         page=page,
         per_page=10,
-        params={"search": search}
+        params={"search": search},
+        sort=request.args.get("sort", "date"),
+        direction=request.args.get("direction", "desc"),
+        sort_columns=sort_columns,
+        default_sort="date",
+        tie_breaker="price_id DESC"
     )
 
     #========================= PRICE TREND CHART DATA =========================
     selected_observation = request.args.get("selected_observation", "")
     selection = json.loads(selected_observation) if selected_observation else {}
+    
     price_id = selection.get("price_id")
+    
     commodity_id = selection.get("commodity_id")
+    if commodity_id is None:
+        commodity_id = 80
+
     commodity_name = selection.get("commodity_name")
+    if commodity_name is None:
+        commodity_name = 'Rice (regular, milled)'
+
     market_name = selection.get("market_name")
+    if market_name is None:
+        market_name = 'Metro Manila'
+
     icon_name = selection.get("icon_name")
+    if icon_name is None:
+        icon_name = '80-rice-regular-milled'
 
     observation_date = selection.get("date")
 
@@ -376,8 +404,8 @@ def price_observations():
         prev_year = (observation_date - relativedelta(years=1)).strftime("%Y")
     else:
         observation_date = None
-        cur_year = None
-        prev_year = None
+        cur_year = int(helpers.fetch_single_static_qry("SELECT TO_CHAR(MAX(observation_date), 'YYYY') FROM price_observations"))
+        prev_year = cur_year - 1
 
     com_price_trend_cols, com_price_trend_rows = helpers.fetch_chart_data_dynamic_qry(
         base_qry=sql_txt.com_price_trend_qry,
@@ -404,6 +432,29 @@ def price_observations():
         
     )
 
+    #========================= PRICE TREND CHART DATA - ALL MARKET =========================
+    com_price_trend_all_mkt_cols, com_price_trend_all_mkt__rows = helpers.fetch_chart_data_dynamic_qry(
+        base_qry=sql_txt.com_price_trend_all_mkt_qry,
+        filters=None,
+        addtl_cond_qry=None,
+        addtl_qry=None,
+        addtl_params={
+            "cur_year": cur_year,
+            "prev_year": prev_year,
+            "commodity_id": commodity_id,
+        },
+    )
+
+    com_price_trend_all_mkt_rows_chart_data = helpers.to_chart_data(
+        com_price_trend_all_mkt__rows,
+        x_column="month",
+        series_column=None,  
+        value_columns=["cur_year", "prev_year"],
+        value_labels={
+            "cur_year": cur_year,
+            "prev_year": prev_year,
+        },
+    )
 
     #========================================== PIPELINE STATUS ==========================================
     latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
@@ -417,6 +468,7 @@ def price_observations():
         latest_sync=latest_sync,
         latest_obs_date=latest_obs_date,
         com_price_trend_chart_data=com_price_trend_chart_data,
+        com_price_trend_all_mkt_rows_chart_data=com_price_trend_all_mkt_rows_chart_data,
         price_id=price_id,
         commodity_id=commodity_id,
         commodity_name=commodity_name,
@@ -426,15 +478,142 @@ def price_observations():
 
 @app.route('/commodities')
 def commodities():
-    return render_template('commodities.html')
+
+    #========================= POPULATE PRICE COMMODITIES TABLE =========================
+    sort_columns = {
+        "commodity_id": "commodity_id",
+        "commodity": "commodity_name",
+        "category": "category_name"
+    }
+
+    search = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
+
+    commodities_col, commodities_rows, commodities_pagination = helpers.fetch_paginated_records(
+        count_qry=sql_txt.commodities_count_qry,
+        data_qry=sql_txt.commodities_qry,
+        page=page,
+        per_page=10,
+        params={"search": search},
+        sort=request.args.get("sort", "commodity_id"),
+        direction=request.args.get("direction", "asc"),
+        sort_columns=sort_columns,
+        default_sort="commodity_id",
+        tie_breaker=None,
+    )
+
+    #========================= UNIQUE COMMODITIES PER CATEGORY CHART =========================
+    uniq_com_per_cat_cols, uniq_com_per_cat_rows = helpers.fetch_chart_data_dynamic_qry(
+            base_qry=sql_txt.uniq_com_per_cat_qry,
+            filters=None,
+            addtl_cond_qry=None,
+            addtl_qry=None,
+            addtl_params=None
+        )
+
+    uniq_com_per_cat_data = helpers.to_chart_data(
+        uniq_com_per_cat_rows,
+        x_column="category_name",
+        series_column=None,
+        value_column="Count"
+    )
+
+    #========================= DATA RECORDS BREAKDOWN BY CATEGORY AND PRICE TYPE CHART =========================
+    data_records_breakdown_cols, data_records_breakdown_rows = helpers.fetch_chart_data_dynamic_qry(
+        base_qry=sql_txt.data_records_breakdown_qry,
+        filters=None,
+        addtl_cond_qry=None,
+        addtl_qry=None,
+        addtl_params=None
+    )
+
+    data_records_breakdown_data = helpers.to_chart_data(
+        data_records_breakdown_rows,
+        x_column="category_name",
+        series_column="price_type",  
+        value_columns=['record_count'],
+        value_labels=['record_count']
+    )
+
+    #========================================== PIPELINE STATUS ==========================================
+    latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
+
+    return render_template(
+        'commodities.html',
+        latest_sync=latest_sync,
+        latest_obs_date=latest_obs_date,
+        commodities_rows=commodities_rows,
+        **commodities_pagination,
+        uniq_com_per_cat_data=uniq_com_per_cat_data,
+        data_records_breakdown_data=data_records_breakdown_data
+    )
 
 @app.route('/markets')
 def markets():
-    return render_template('markets.html')
+    #========================= POPULATE PRICE MARKETS TABLE =========================
+    sort_columns = {
+        "market_id": "market_id",
+        "region": "region",
+        "province": "province",
+        "market": "market_name",
+        "record_count": "record_count",
+        "com_count": "com_count"
+    }
 
-@app.route('/test')
-def test():
-    return render_template('test.html')
+    search = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
+
+    markets_col, markets_rows, markets_pagination = helpers.fetch_paginated_records(
+        count_qry=sql_txt.markets_count_qry,
+        data_qry=sql_txt.markets_qry,
+        page=page,
+        per_page=20,
+        params={"search": search},
+        sort=request.args.get("sort", "market_id"),
+        direction=request.args.get("direction", "asc"),
+        sort_columns=sort_columns,
+        default_sort="market_id",
+        tie_breaker=None,
+    )
+
+
+    #========================= RECORD DISTRIBUTION BY PROVINCE =========================
+    rec_dist_by_prov_col, rec_dist_by_prov_rows = helpers.fetch_chart_data_dynamic_qry(
+            base_qry=sql_txt.markets_geo_chart_qry,
+            filters=None,
+            addtl_cond_qry=None,
+            addtl_qry=None,
+            addtl_params=None
+        )
+    
+    # Retrive the geometry json files inside ..\static\json\regions
+    region_dir = Path(app.static_folder) / "json" / "regions"
+    region_geojson_files = sorted(path.name for path in region_dir.glob("*.json"))
+
+    #========================================== PIPELINE STATUS ==========================================
+    latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
+
+    return render_template(
+        'markets.html',
+        markets_rows=markets_rows,
+        **markets_pagination,
+        latest_sync=latest_sync,
+        latest_obs_date=latest_obs_date,
+        rec_dist_by_prov_rows=rec_dist_by_prov_rows,
+        region_geojson_files=region_geojson_files
+    )
+
+@app.route('/about')
+def about():
+
+    #========================================== PIPELINE STATUS ==========================================
+    latest_sync, latest_obs_date = helpers.fetch_latest_sync_obs_date()
+    
+    return render_template(
+        'about.html',
+        latest_sync=latest_sync,
+        latest_obs_date=latest_obs_date
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

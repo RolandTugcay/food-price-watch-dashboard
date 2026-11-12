@@ -58,37 +58,33 @@ if (comPriceTrendDataElement && comPriceTrendCanvas) {
     }
 }
 
+const comPriceTrendAllMktDataElement = document.getElementById("com-price-trend-all-mkt-data");
+const comPriceTrendAllMktCanvas = document.getElementById("commodityPriceTrendAllMktCanvas");
+const comPriceTrendAllMktEmptyMessage = document.getElementById("commodity-price-trend-all-mkt-empty");
 
-// document.addEventListener('DOMContentLoaded', () => {
-// const checkboxes = document.querySelectorAll('.commodity-checkbox');
-// const hiddenInput = document.getElementById('commodity_ids');
+if (comPriceTrendAllMktDataElement && comPriceTrendAllMktCanvas) {
+    const chartData = JSON.parse(comPriceTrendAllMktDataElement.textContent);
 
-// // Attach an explicit change listener to every individual checkbox
-// checkboxes.forEach(checkbox => {
-//     checkbox.addEventListener('change', (event) => {
-//         // This runs instantly the moment a specific checkbox is clicked/changed
-//         console.log(`Checkbox ${event.target.value} changed to:`, event.target.checked);
-        
-//         updateHiddenInput();
-//     });
-// });
-
-// function updateHiddenInput() {
-//     const checkedValues = Array.from(checkboxes)
-//                                 .filter(cb => cb.checked)
-//                                 .map(cb => cb.value);
-    
-//     hiddenInput.value = checkedValues.join(',');
-// }
-// });
-
-// function handleCheckboxChange(checkbox) {
-//     const hiddenInput = document.getElementById('commodity_ids');
-//     const allCheckboxes = document.querySelectorAll('.commodity-checkbox');
-    
-//     const checkedValues = Array.from(allCheckboxes)
-//                                .filter(cb => cb.checked)
-//                                .map(cb => cb.value);
-                               
-//     hiddenInput.value = checkedValues.join(',');
-// }
+    if (chartData.datasets.some(dataset => dataset.data.length > 0)) {
+        new Chart(comPriceTrendAllMktCanvas, {
+            type: "line",
+            data: chartData,
+            options: {
+                responsive: true,
+                tension: 0.3,
+                spanGaps: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+        if (comPriceTrendAllMktEmptyMessage) {
+            comPriceTrendAllMktEmptyMessage.hidden = true;
+        }
+    } else if (comPriceTrendAllMktEmptyMessage && selectedObservationInput.value) {
+        comPriceTrendAllMktEmptyMessage.textContent =
+            "No price trend data is available for this observation.";
+    }
+}
