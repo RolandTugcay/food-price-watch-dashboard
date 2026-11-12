@@ -3,16 +3,18 @@ import json
 from datetime import date
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 from sqlalchemy import text
 from src.connection import database_url, db
 from pathlib import Path
+from dotenv import load_dotenv
 import src.helpers as helpers
 import src.sql_txt as sql_txt
 
 
 #==================== Initialize the Flask application =====================
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ["FLASK_SECRET_KEY"]
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -375,8 +377,22 @@ def price_observations():
     )
 
     #========================= PRICE TREND CHART DATA =========================
-    selected_observation = request.args.get("selected_observation", "")
-    selection = json.loads(selected_observation) if selected_observation else {}
+    if "selected_observation" in request.args:
+        selected_observation = request.args.get("selected_observation", "")
+
+        if selected_observation:
+            session["selected_observation"] = selected_observation
+        else:
+            # Your search JavaScript submits an empty value when search changes.
+            session.pop("selected_observation", None)
+    else:
+        selected_observation = session.get("selected_observation", "")
+
+    try:
+        selection = json.loads(selected_observation) if selected_observation else {}
+    except json.JSONDecodeError:
+        selection = {}
+        session.pop("selected_observation", None)
     
     price_id = selection.get("price_id")
     
