@@ -5,6 +5,7 @@ A Flask web dashboard for exploring food-price observations across the Philippin
 ## Table of Contents
 
 - [About the Project](#about-the-project)
+- [Data Pipleline](#data-pipiline)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
@@ -20,9 +21,15 @@ A Flask web dashboard for exploring food-price observations across the Philippin
 
 ## About the Project
 
-The dashboard helps users explore food prices by commodity, market, region, province, date, unit, and price type. The interface identifies its data source as the World Food Programme (WFP), refreshed monthly.
+The dashboard helps users explore food prices by commodity, market, region, province, date, unit, and price type.
 
-The application reads data from a PostgreSQL database and renders server-generated pages with interactive charts and maps in the browser. The dashboard repository does not include database credentials or a database backup.
+The data comes from [The World Food Programme (WFP), Philippines - Food Prices](https://data.humdata.org/dataset/wfp-food-prices-for-philippines/resource/9a842d72-0d7d-4922-ad0e-eb8106c1ab0e), which is refreshed monthly.
+
+The application reads data from a PostgreSQL database hosted on Supabase and renders server-generated pages with interactive charts and maps in the browser.
+
+## Data Pipeline
+
+The data is supplied by the [Food Price Watch Pipeline](https://github.com/RolandTugcay/food-price-watch-pipeline), which performs a weekly ETL (Extract, Transform, Load) from the Philippines - Food Prices .CSV file into a normalized tables in Supabase database.
 
 ## Features
 
@@ -30,8 +37,6 @@ The application reads data from a PostgreSQL database and renders server-generat
 - Price-observation table with search, sorting, pagination, and selected-observation trends.
 - Commodity table and category-level charts.
 - Market table and a province map showing price-observation and monitored-commodity counts on hover.
-- Province map assets served from local GeoJSON files.
-- Database health endpoint at `/health/db`.
 
 ## Technology Stack
 
@@ -45,11 +50,10 @@ The application reads data from a PostgreSQL database and renders server-generat
 
 ### Frontend
 
-- HTML and CSS
+- HTML, CSS and Javascript
 - Bootstrap 5 and Bootstrap Icons
-- Chart.js
-- Leaflet for interactive maps
-- OpenStreetMap tiles
+- [Chart.js](https://www.chartjs.org/) for interactive charts
+- [Leaflet](https://leafletjs.com/) for interactive maps
 
 Bootstrap, Bootstrap Icons, Chart.js, Leaflet, and map tiles are loaded from external CDNs/services and require network access in the browser.
 
