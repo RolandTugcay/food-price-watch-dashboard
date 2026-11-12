@@ -22,7 +22,75 @@
         </div>
         <div class="container-fluid">
             <section class="about-pannel">
-                <p></p>
+                <section id="about-the-project">
+                    <h2>About the Project</h2>
+                    <p>
+                        The dashboard helps users explore food prices by commodity, market,
+                        region, province, date, unit, and price type.
+                        The data source is from 
+                        <a href="https://data.humdata.org/dataset/wfp-food-prices-for-philippines/resource/9a842d72-0d7d-4922-ad0e-eb8106c1ab0e">
+                        The World Food Programme (WFP), Philippines - Food Prices
+                        </a> 
+                        which is refreshed monthly.
+                    </p>
+                    <p>
+                        The application reads data from a PostgreSQL database (Supabase) and renders
+                        server-generated pages with interactive charts and maps in the browser.
+                    </p>
+                </section>
+
+                <section id="data-pipeline">
+                    <h2>Data Pipeline</h2>
+                    <p>
+                        The data is supplied by the
+                        <a href="https://github.com/RolandTugcay/food-price-watch-pipeline">
+                            Food Price Watch Pipeline
+                        </a>
+                        , which performs a weekly ETL (Extract, Transform, Load) from the Philippines - Food Prices .CSV file into a normalized tables in Supabase database.
+                    </p>
+                </section>
+
+                <section id="features">
+                    <h2>Features</h2>
+                    <ul>
+                        <li>Dashboard summary metrics and filterable price charts</li>
+                        <li>
+                            Price-observation table with search, sorting, pagination, and
+                            selected-observation trends.
+                        </li>
+                        <li>Commodity table and category-level charts.</li>
+                        <li>
+                            Market table and a province map showing price-observation and
+                            monitored-commodity counts on hover.
+                        </li>
+                    </ul>
+                </section>
+
+                <section id="technology-stack">
+                    <h2>Technology Stack</h2>
+
+                    <h3>Backend</h3>
+                    <ul>
+                        <li>Python</li>
+                        <li>Flask and Jinja</li>
+                        <li>Flask-SQLAlchemy and SQLAlchemy</li>
+                        <li>Psycopg 3 PostgreSQL driver</li>
+                        <li>PostgreSQL, configured for an SSL connection</li>
+                    </ul>
+
+                    <h3>Frontend</h3>
+                    <ul>
+                        <li>HTML, CSS and Javascript</li>
+                        <li>Bootstrap 5 and Bootstrap Icons</li>
+                        <li><a href="https://www.chartjs.org/">Chart.js</a> for interactive charts</li>
+                        <li><a href="https://leafletjs.com/">Leaflet</a> for interactive maps</li>
+                    </ul>
+
+                    <p>
+                        Bootstrap, Bootstrap Icons, Chart.js, Leaflet, and map tiles are loaded
+                        from external CDNs or services and require network access in the browser.
+                    </p>
+                </section>
             </section>
         </div>
     </div>
