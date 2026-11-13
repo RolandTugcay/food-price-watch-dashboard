@@ -142,11 +142,6 @@ def index():
 
 
     #========================================== KPI CARDS DATA ==========================================
-    join_qry = """FROM price_observations AS po
-                    INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
-                    INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
-                    INNER JOIN categories AS cat ON com.category_id = cat.category_id
-                """
     filters = {
         "category_ids": ("cat.category_id IN :category_ids", selected_category_ids),
         "commodity_ids": ("com.commodity_id IN :commodity_ids", selected_commodity_ids),
@@ -159,62 +154,34 @@ def index():
         "filter_date_to": ("po.observation_date <= :filter_date_to", filter_date_to)
     }
 
-    commodities_count_select_qry = """SELECT count(DISTINCT com.commodity_id) as cnt"""
-    commodities_count = helpers.fetch_single_dynamic_qry(f"{commodities_count_select_qry} {join_qry}", filters, "")
+    kpi_col, kpi_rows = helpers.fetch_filtered_records_dynamic_qry(
+        base_qry=sql_txt.kpi_base_qry,
+        filters=filters,
+        addtl_cond_qry=None,
+        addtl_qry=sql_txt.kpi_bottom_qry
+    )
 
-    category_count_select_qry = """SELECT count(DISTINCT cat.category_id) as cnt"""
-    category_count = helpers.fetch_single_dynamic_qry(f"{category_count_select_qry} {join_qry}", filters, "")
-
-    market_count_select_qry = """SELECT count(DISTINCT mkt.market_id) as cnt"""
-    market_count = helpers.fetch_single_dynamic_qry(f"{market_count_select_qry} {join_qry}", filters, "")
-
-    region_count_select_qry = """SELECT count(DISTINCT mkt.admin1) as cnt"""
-    region_count = helpers.fetch_single_dynamic_qry(f"{region_count_select_qry} {join_qry}", filters, "")
-
-    price_obs_count_select_qry = """SELECT count(*) as cnt"""
-    price_obs_count = helpers.fetch_single_dynamic_qry(f"{price_obs_count_select_qry} {join_qry}", 
-                                                       filters, 
-                                                       "")
-
-    price_obs_count_new = helpers.fetch_single_dynamic_qry(f"{price_obs_count_select_qry} {join_qry}", filters, 
-                                                           " po.observation_date = ( SELECT max(observation_date) FROM price_observations )")
-
-    # Average price
-    this_mo_avg_prc_slct_qry = """SELECT avg(po.price) as avg_price"""
-    this_mo_avg_prc = helpers.fetch_single_dynamic_qry(f"{this_mo_avg_prc_slct_qry} {join_qry}", filters, 
-                                                            " po.observation_date = ( SELECT max(observation_date) FROM price_observations )")
-    
-    prev_mo_avg_prc_slct_qry = """SELECT avg(po.price) as avg_price"""
-    prev_mo_avg_prc = helpers.fetch_single_dynamic_qry(f"{prev_mo_avg_prc_slct_qry} {join_qry}", filters,
-                                                            " po.observation_date = (SELECT observation_date FROM v_observation_date_row_num WHERE row_num = 2)")
-
-    this_mo_avg_prc = this_mo_avg_prc if this_mo_avg_prc is not None else 0
-    avg_prc_pct_change = ((this_mo_avg_prc - prev_mo_avg_prc) / prev_mo_avg_prc * 100) if prev_mo_avg_prc else 0
-
+    kpi_row = kpi_rows[0] if kpi_rows else {}
+    commodities_count = kpi_row.get("com_cnt", 0)
+    category_count = kpi_row.get("cat_cnt", 0)
+    market_count = kpi_row.get("mkt_cnt", 0)
+    region_count = kpi_row.get("reg_cnt", 0)
+    price_obs_count = kpi_row.get("po_cnt", 0)
+    price_obs_count_new = kpi_row.get("new_po_cnt", 0)
+    this_mo_avg_prc = kpi_row.get("avg_price", 0)
+    avg_prc_pct_change = kpi_row.get("change_pct", 0)
 
     #========================================== CHART DATA ==========================================
-    #========================= FILTERS FOR CHART DATA ==========================
-    filters_chart = {
-        "category_ids": ("category_id IN :category_ids", selected_category_ids),
-        "commodity_ids": ("commodity_id IN :commodity_ids", selected_commodity_ids),
-        "region_values": ("admin1 IN :region_values", selected_region_values),
-        "province_names": ("admin2 IN :province_names", selected_province_values),
-        "market_ids": ("market_id IN :market_ids", selected_market_ids),
-        "unit_values": ("unit IN :unit_values", selected_unit_values),
-        "price_type_values": ("price_type IN :price_type_values", selected_price_type_values),
-        "filter_date_from": ("observation_date >= :filter_date_from", filter_date_from),
-        "filter_date_to": ("observation_date <= :filter_date_to", filter_date_to)
-    }
-
     #========================= MONTHLY TREND CHART DATA ==========================
     monthly_trend_col, monthly_trend_rows = helpers.fetch_chart_data_dynamic_qry(
         sql_txt.trend_top_qry, 
-        filters_chart, "", 
+        filters, "", 
         sql_txt.trend_next_qry +
         """SELECT *
-        FROM monthly_category_trend 
-        WHERE date_rank <= 25
-        ORDER BY observation_date DESC"""
+            FROM monthly_category_trend 
+            WHERE date_rank <= 25
+            ORDER BY observation_date DESC
+        """
     )
 
     monthly_trend_chart = helpers.to_chart_data(
@@ -237,7 +204,7 @@ def index():
 
     price_increase_chart_col, price_increase_chart_rows = helpers.fetch_chart_data_dynamic_qry(
         base_qry=sql_txt.price_increase_top_qry,
-        filters=filters_chart,
+        filters=filters,
         addtl_cond_qry=sql_txt.price_increase_addtl_cond,
         addtl_qry=sql_txt.price_increase_bottom_qry,
         addtl_params={
@@ -263,13 +230,16 @@ def index():
     reg_prc_comp_chart_col, reg_prc_comp_chart_rows = helpers.fetch_chart_data_dynamic_qry(
         base_qry="""
         SELECT
-            admin1 as region,
-            AVG(price) as "Average Price"
-        FROM v_price_observations
+            mkt.admin1 AS region,
+            AVG(po.price) AS "Average Price"
+        FROM price_observations AS po
+            INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+            INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+            INNER JOIN categories AS cat ON com.category_id = cat.category_id
         """,
-        filters=filters_chart,
+        filters=filters,
         addtl_cond_qry=None,
-        addtl_qry="""GROUP BY admin1 ORDER BY 2 DESC""",
+        addtl_qry="""GROUP BY mkt.admin1 ORDER BY 2 DESC""",
         addtl_params=None
     )
 
@@ -280,13 +250,21 @@ def index():
         value_column="Average Price"
     )
 
-    #========================= MAP CHART DATA ==========================
+    #========================= PROVINCIAL PRICE COMPARISON CHART DATA ==========================
 
     map_chart_col, map_chart_rows = helpers.fetch_chart_data_dynamic_qry(
-        base_qry="""SELECT admin2 AS province, AVG(PRICE) AS avg_price FROM v_price_observations""",
-        filters=filters_chart,
+        base_qry="""
+        SELECT 
+            mkt.admin2 AS province, 
+            AVG(po.price) AS avg_price 
+        FROM price_observations AS po
+                INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+                INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+                INNER JOIN categories AS cat ON com.category_id = cat.category_id
+        """,
+        filters=filters,
         addtl_cond_qry=None,
-        addtl_qry="""GROUP BY admin2""",
+        addtl_qry="""GROUP BY mkt.admin2""",
         addtl_params=None
     )
 
@@ -335,7 +313,6 @@ def index():
         filtered_cat_com=filtered_cat_com,
         filtered_reg_prov_mkt=filtered_reg_prov_mkt,
         this_mo_avg_prc=this_mo_avg_prc,
-        prev_mo_avg_prc=prev_mo_avg_prc,
         avg_prc_pct_change=avg_prc_pct_change,
         monthly_trend_chart=monthly_trend_chart,
         price_increase_chart=price_increase_chart,

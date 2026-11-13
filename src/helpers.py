@@ -57,6 +57,37 @@ def fetch_records_dynamic_qry(base_qry, clause_qry, sort_qry, data_ids, var_ids)
         
         return columns, rows
 
+def fetch_filtered_records_dynamic_qry(base_qry, filters, addtl_cond_qry=None, addtl_qry=None):
+    conditions = []
+    params = {}
+
+    for param_name, (condition, values) in filters.items():
+        if values:
+            conditions.append(condition)
+            params[param_name] = values
+
+    if addtl_cond_qry and addtl_cond_qry.strip():
+        conditions.append(addtl_cond_qry.strip())
+
+    query_text = base_qry
+    if conditions:
+        query_text += " WHERE " + " AND ".join(conditions)
+
+    query = text(f"{query_text} {addtl_qry}" if addtl_qry else query_text)
+
+    for param_name, value in params.items():
+        is_list = isinstance(value, (list, tuple, set))
+        query = query.bindparams(
+            bindparam(param_name, expanding=is_list)
+        )
+
+    with db.engine.connect() as connection:
+        result = connection.execute(query, params)
+        columns = list(result.keys())
+        rows = [dict(row) for row in result.mappings()]
+        return columns, rows
+
+
 def fetch_single_static_qry(str_qry):
     with db.engine.connect() as connection:
         # Returns the value if found, or None if the result set is empty

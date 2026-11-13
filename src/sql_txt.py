@@ -1,3 +1,75 @@
+kpi_base_qry = """
+WITH full_data_cte AS (
+	SELECT 
+		po.price_id,
+		po.observation_date,
+		to_char(po.observation_date::timestamp with time zone, 'YYYY'::text) AS year,
+		to_char(po.observation_date::timestamp with time zone, 'MM'::text) AS month,
+		po.market_id,
+		po.commodity_id,
+		po.unit,
+		po.price_flag,
+		po.price_type,
+		po.currency,
+		po.price,
+		po.usd_price,
+		com.commodity_name,
+		cat.category_id,
+		cat.category_name,
+		mkt.market_name,
+		mkt.admin1,
+		mkt.admin2,
+		mkt.latitude,
+		mkt.longitude
+	FROM price_observations po
+	INNER JOIN markets mkt ON po.market_id = mkt.market_id
+	INNER JOIN commodities com ON po.commodity_id = com.commodity_id
+	INNER JOIN categories cat ON com.category_id = cat.category_id
+"""
+
+kpi_bottom_qry = """
+)
+,record_count_cte AS (
+SELECT
+	1 AS linker,
+	COUNT(DISTINCT price_id) AS po_cnt,
+	COUNT(DISTINCT market_id) AS mkt_cnt,
+	COUNT(DISTINCT admin1) AS reg_cnt,
+	COUNT(DISTINCT commodity_id) AS com_cnt,
+	COUNT(DISTINCT category_id) AS cat_cnt
+FROM full_data_cte
+)
+,lat_avg_price_cte AS (
+SELECT 1 AS linker, AVG(price) AS avg_price
+FROM full_data_cte 
+WHERE observation_date = (SELECT MAX(observation_date) FROM price_observations)
+)
+,prev_avg_price_cte AS (
+SELECT 1 AS linker, AVG(price) AS prev_avg_price
+FROM full_data_cte 
+WHERE 
+	observation_date = (SELECT MAX(observation_date) FROM price_observations WHERE observation_date < (SELECT MAX(observation_date) FROM price_observations))
+)
+,new_po_count_cte AS (
+SELECT 1 AS linker, COUNT(price_id) AS new_po_cnt
+FROM full_data_cte
+WHERE observation_date = (SELECT MAX(observation_date) FROM full_data_cte)
+)
+SELECT
+	po_cnt,
+	mkt_cnt,
+	reg_cnt,
+	com_cnt,
+	cat_cnt,
+	new_po_cnt,
+	ROUND(avg_price,2) AS avg_price,
+	ROUND(((avg_price - prev_avg_price) / prev_avg_price) * 100 , 2) AS change_pct
+FROM record_count_cte AS c
+INNER JOIN new_po_count_cte AS n ON c.linker = n.linker
+INNER JOIN lat_avg_price_cte AS l ON c.linker = l.linker
+INNER JOIN prev_avg_price_cte AS p ON c.linker = p.linker
+"""
+
 region_case_statements = """
 CASE
     WHEN admin1 = 'Autonomous region in Muslim Mindanao' THEN 'Autonomous region in Muslim Mindanao (ARMM)'
@@ -22,31 +94,34 @@ END AS region_text
 """
 
 trend_top_qry = """
-WITH monthly_series_prices AS MATERIALIZED (
+WITH monthly_series_prices AS (
     SELECT
-        DATE_TRUNC('month', observation_date)::date AS observation_date,
-        category_id,
-        commodity_id,
-        market_id,
-        unit,
-        price_type,
-        currency,
-        AVG(price) AS avg_price
-    FROM v_price_observations
+        DATE_TRUNC('month', po.observation_date)::date AS observation_date,
+        com.category_id,
+        po.commodity_id,
+        po.market_id,
+        po.unit,
+        po.price_type,
+        po.currency,
+        AVG(po.price) AS avg_price
+        FROM price_observations AS po
+    INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+    INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+    INNER JOIN categories AS cat ON com.category_id = cat.category_id
 """
 
 trend_next_qry = """
 GROUP BY
-    DATE_TRUNC('month', observation_date)::date,
-    category_id,
-    commodity_id,
-    market_id,
-    unit,
-    price_type,
-    currency
+    DATE_TRUNC('month', po.observation_date)::date,
+    com.category_id,
+    po.commodity_id,
+    po.market_id,
+    po.unit,
+    po.price_type,
+    po.currency
 ),
 
-first_month_per_series AS MATERIALIZED (
+first_month_per_series AS (
     SELECT DISTINCT ON (
         category_id, commodity_id, market_id, unit, price_type, currency
     )
@@ -123,28 +198,31 @@ monthly_category_trend AS MATERIALIZED (
 """
 
 price_increase_top_qry = """
-WITH price_obs_data AS MATERIALIZED (
+WITH price_obs_data AS (
     SELECT
-        DENSE_RANK() OVER (ORDER BY observation_date DESC) as date_rank,
-        observation_date,
-        category_id,
-        category_name,
-        commodity_id,
-        commodity_name,
-        unit,
-        price_type,
-        currency,
-        market_id,
-        market_name,
-        price
-    FROM v_price_observations
+        DENSE_RANK() OVER (ORDER BY po.observation_date DESC) AS date_rank,
+        po.observation_date,
+        com.category_id,
+        cat.category_name,
+        po.commodity_id,
+        com.commodity_name,
+        po.unit,
+        po.price_type,
+        po.currency,
+        po.market_id,
+        mkt.market_name,
+        po.price
+    FROM price_observations AS po
+        INNER JOIN markets AS mkt ON po.market_id = mkt.market_id
+        INNER JOIN commodities AS com ON po.commodity_id = com.commodity_id
+        INNER JOIN categories AS cat ON com.category_id = cat.category_id
 """
 
-price_increase_addtl_cond = """observation_date in (:obs_date_1,:obs_date_2,:prev_obs_date_1,:prev_obs_date_2)"""
+price_increase_addtl_cond = """po.observation_date in (:obs_date_1,:obs_date_2,:prev_obs_date_1,:prev_obs_date_2)"""
 
 price_increase_bottom_qry = """
 ),
-	joined_data AS MATERIALIZED (
+	joined_data AS (
 	SELECT
 		a.category_id,
 		a.category_name,
