@@ -1,3 +1,15 @@
+function formatPeso(value) {
+    const amount = Number(value);
+    return Number.isFinite(amount)
+        ? `\u20B1${amount.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`
+        : value;
+}
+
+function formatPercent(value) {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? `${amount.toLocaleString("en-PH")}%` : value;
+}
+
 // Monthly Price Trend by Category Chart
 const dataElementCategoryMonthlyTrend = document.getElementById("monthly-trend-data");
 const canvasCategoryMonthlyTrendChart = document.getElementById("categoryMonthlyTrendChart");
@@ -10,7 +22,12 @@ if (dataElementCategoryMonthlyTrend && canvasCategoryMonthlyTrendChart) {
         data: chartDataCatMoTrend,
         options: {
             responsive: true,
-            tension: 0.5
+            tension: 0.5,
+            scales: {
+                y: {
+                    ticks: { callback: formatPercent }
+                }
+            }
         }
     });
 }
@@ -47,6 +64,7 @@ if (priceIncreaseDataElement && canvasPriceIncreaseChart) {
                 },
                 y: {
                     stacked: true,
+                    ticks: { callback: formatPercent }
                 },
             },
             elements: {
@@ -114,6 +132,11 @@ if (regionalPriceComparisonDataElement && canvasRegionalPriceComparisonChart) {
             elements: {
                 bar: {
                     borderWidth: 2
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { callback: formatPeso }
                 }
             }
         }
