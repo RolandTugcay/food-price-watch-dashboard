@@ -1,6 +1,6 @@
 # Philippines Food Price Watch Dashboard
 
-A Flask web dashboard for exploring food-price observations across the Philippines. It presents summary indicators, trends, market and commodity breakdowns, and an interactive province map using data stored in PostgreSQL.
+A Flask web dashboard for exploring food-price observations across the Philippines. It presents summary indicators, trends, market and commodity breakdowns, and interactive choropleth map charts using data stored in PostgreSQL.
 
 ## Table of Contents
 
@@ -33,9 +33,9 @@ The data is supplied by the [Food Price Watch Pipeline](https://github.com/Rolan
 
 ## Features
 
-- Dashboard summary metrics and filterable price trends.
-- Price-observation table with search, sorting, pagination, and selected-observation trends.
-- Commodity table and category-level charts.
+- Dashboard filterable summary metrics and charts
+- Price-observation table with search, sorting, pagination, and selectable observation price trends.
+- Commodity table and category-level charts for macro overview of the whole dataset.
 - Market table and a province map showing price-observation and monitored-commodity counts on hover.
 
 ## Technology Stack
